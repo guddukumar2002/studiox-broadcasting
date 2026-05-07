@@ -3,54 +3,64 @@
 import { useMemo, useState } from "react";
 import DashboardLayout from "../../../layouts/DashboardLayout";
 import { useAllContent } from "../../../hooks/useContent";
-import { SkeletonRow } from "../../../components/SkeletonCard";
 import { ApprovalBadge, ScheduleBadge } from "../../../components/StatusBadge";
-import { EmptyState, ErrorState } from "../../../components/EmptyState";
-import { Search, Calendar, User, ArrowUpDown, MoreVertical } from "lucide-react";
+import { SkeletonRow } from "../../../components/SkeletonCard";
+import { Search, User, Calendar, Inbox, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
+
+const PAGE_SIZE = 20;
 
 export default function AllContentPage() {
   const { data: content, loading, error, refetch } = useAllContent();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("all");
+  const [page, setPage] = useState(1);
 
-  const filteredContent = useMemo(() => {
-    return content.filter((item) => {
-      const q = searchQuery.toLowerCase();
-      const matchesSearch =
-        item.title.toLowerCase().includes(q) ||
-        item.teacherName.toLowerCase().includes(q) ||
-        item.subject.toLowerCase().includes(q);
-      const matchesStatus = filterStatus === "all" || item.status === filterStatus;
-      return matchesSearch && matchesStatus;
+  const filtered = useMemo(() => {
+    setPage(1); // reset to page 1 on filter change — handled via key below
+    const q = search.toLowerCase();
+    return content.filter(item => {
+      const matchSearch = item.title.toLowerCase().includes(q) || item.teacherName.toLowerCase().includes(q) || item.subject.toLowerCase().includes(q);
+      const matchStatus = status === "all" || item.status === status;
+      return matchSearch && matchStatus;
     });
-  }, [content, searchQuery, filterStatus]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [content, search, status]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paginated = useMemo(() => filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE), [filtered, safePage]);
+
+  const handleSearch = (val) => { setSearch(val); setPage(1); };
+  const handleStatus = (val) => { setStatus(val); setPage(1); };
 
   return (
     <DashboardLayout>
-      <div className="space-y-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div>
-            <h1 className="text-4xl font-black tracking-tight text-slate-900">Content Inventory</h1>
-            <p className="text-slate-500 mt-1 font-medium">History of all uploads and their current statuses.</p>
-          </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+
+        {/* Header */}
+        <div>
+          <h1 style={{ fontSize: "18px", fontWeight: 700, color: "#111827" }}>All Content</h1>
+          <p style={{ fontSize: "13px", color: "#6B7280", marginTop: "2px" }}>
+            {loading ? "Loading..." : `${filtered.length} of ${content.length} submissions`}
+          </p>
         </div>
 
         {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+          <div style={{ position: "relative", flex: 1, minWidth: "200px" }}>
+            <Search size={14} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "#9CA3AF" }} />
             <input
               type="text"
               placeholder="Search by title, teacher or subject..."
-              className="w-full bg-white border border-slate-200 rounded-2xl py-4 pl-12 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all shadow-sm"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={search}
+              onChange={e => handleSearch(e.target.value)}
+              style={{ width: "100%", padding: "8px 12px 8px 32px", border: "1px solid #E5E7EB", borderRadius: "7px", fontSize: "13px", color: "#111827", outline: "none", background: "#fff", boxSizing: "border-box" }}
             />
           </div>
           <select
-            className="bg-white border border-slate-200 rounded-2xl px-6 py-4 text-sm font-bold text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all appearance-none min-w-[160px] shadow-sm cursor-pointer"
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
+            value={status}
+            onChange={e => handleStatus(e.target.value)}
+            style={{ padding: "8px 12px", border: "1px solid #E5E7EB", borderRadius: "7px", fontSize: "13px", color: "#374151", background: "#fff", outline: "none", cursor: "pointer", minWidth: "140px" }}
           >
             <option value="all">All Status</option>
             <option value="pending">Pending</option>
@@ -59,90 +69,96 @@ export default function AllContentPage() {
           </select>
         </div>
 
-        {error && <ErrorState message={error} onRetry={refetch} />}
+        {/* Error */}
+        {error && (
+          <div style={{ padding: "12px 16px", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
+            <AlertCircle size={15} color="#EF4444" />
+            <span style={{ fontSize: "13px", color: "#DC2626" }}>{error}</span>
+            <button onClick={refetch} style={{ marginLeft: "auto", fontSize: "12px", color: "#2563EB", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>Retry</button>
+          </div>
+        )}
 
         {/* Table */}
-        <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[900px]">
+        <div style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: "10px", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "650px" }}>
               <thead>
-                <tr className="bg-slate-50/50 border-b border-slate-100">
-                  <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    <div className="flex items-center gap-2 cursor-pointer hover:text-blue-600 transition-colors">
-                      Content Details <ArrowUpDown className="w-3 h-3" />
-                    </div>
-                  </th>
-                  <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Teacher</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Schedule</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Approval</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Timing</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                <tr style={{ background: "#F9FAFB", borderBottom: "1px solid #E5E7EB" }}>
+                  {["Content", "Teacher", "Schedule", "Status", "Timing"].map(h => (
+                    <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontSize: "11px", fontWeight: 600, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.05em" }}>{h}</th>
+                  ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody>
                 {loading ? (
-                  [1, 2, 3, 4, 5].map((i) => <SkeletonRow key={i} />)
-                ) : (
-                  filteredContent.map((item) => (
-                    <tr key={item.id} className="hover:bg-blue-50/30 transition-colors group">
-                      <td className="px-8 py-5">
-                        <div className="flex items-center gap-4">
-                          <div className="w-14 h-14 rounded-2xl bg-slate-100 overflow-hidden border border-slate-200 flex-shrink-0 shadow-inner">
-                            <img src={item.fileUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-bold text-slate-900 truncate group-hover:text-blue-600 transition-colors">
-                              {item.title}
-                            </p>
-                            <p className="text-[10px] text-blue-600 font-black uppercase tracking-widest mt-1">{item.subject}</p>
-                          </div>
+                  [1,2,3,4,5].map(i => <SkeletonRow key={i} />)
+                ) : paginated.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} style={{ padding: "60px 20px", textAlign: "center" }}>
+                      <Inbox size={28} color="#D1D5DB" style={{ margin: "0 auto 10px" }} />
+                      <p style={{ fontSize: "14px", fontWeight: 600, color: "#374151" }}>No records found</p>
+                      <p style={{ fontSize: "12px", color: "#9CA3AF", marginTop: "4px" }}>Try adjusting your search or filter</p>
+                    </td>
+                  </tr>
+                ) : paginated.map((item, i) => (
+                  <tr key={item.id} style={{ borderBottom: i < paginated.length - 1 ? "1px solid #F3F4F6" : "none" }}>
+                    <td style={{ padding: "12px 16px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <div style={{ width: "36px", height: "36px", borderRadius: "7px", background: "#F3F4F6", overflow: "hidden", flexShrink: 0, border: "1px solid #E5E7EB" }}>
+                          <img src={item.fileUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />
                         </div>
-                      </td>
-                      <td className="px-8 py-5">
-                        <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-full bg-blue-50 flex items-center justify-center border border-blue-100">
-                            <User className="w-3.5 h-3.5 text-blue-600" />
-                          </div>
-                          <span className="text-sm text-slate-600 font-medium">{item.teacherName}</span>
+                        <div style={{ minWidth: 0 }}>
+                          <p style={{ fontSize: "13px", fontWeight: 600, color: "#111827", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "160px" }}>{item.title}</p>
+                          <p style={{ fontSize: "11px", color: "#2563EB", fontWeight: 500, marginTop: "2px" }}>{item.subject}</p>
                         </div>
-                      </td>
-                      <td className="px-8 py-5">
-                        <div className="space-y-1">
-                          <p className="text-xs text-slate-500 font-bold flex items-center gap-2">
-                            <Calendar className="w-3.5 h-3.5 text-slate-300" />
-                            {new Date(item.startTime).toLocaleDateString()}
-                          </p>
-                          <p className="text-[10px] text-slate-400 font-medium ml-5">
-                            {new Date(item.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} –{" "}
-                            {new Date(item.endTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                          </p>
-                        </div>
-                      </td>
-                      <td className="px-8 py-5">
-                        <ApprovalBadge status={item.status} />
-                      </td>
-                      <td className="px-8 py-5">
-                        <ScheduleBadge startTime={item.startTime} endTime={item.endTime} />
-                      </td>
-                      <td className="px-8 py-5 text-right">
-                        <button className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 transition-colors">
-                          <MoreVertical className="w-5 h-5" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
+                      </div>
+                    </td>
+                    <td style={{ padding: "12px 16px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: "#374151" }}>
+                        <User size={12} color="#9CA3AF" /> {item.teacherName}
+                      </div>
+                    </td>
+                    <td style={{ padding: "12px 16px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "12px", color: "#6B7280" }}>
+                        <Calendar size={11} /> {new Date(item.startTime).toLocaleDateString()}
+                      </div>
+                      <p style={{ fontSize: "11px", color: "#9CA3AF", marginTop: "2px", paddingLeft: "16px" }}>
+                        {new Date(item.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} – {new Date(item.endTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    </td>
+                    <td style={{ padding: "12px 16px" }}><ApprovalBadge status={item.status} /></td>
+                    <td style={{ padding: "12px 16px" }}><ScheduleBadge startTime={item.startTime} endTime={item.endTime} /></td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
 
-          {!loading && filteredContent.length === 0 && !error && (
-            <div className="py-24 text-center">
-              <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Search className="w-8 h-8 text-slate-200" />
+          {/* Pagination */}
+          {!loading && filtered.length > PAGE_SIZE && (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderTop: "1px solid #F3F4F6" }}>
+              <span style={{ fontSize: "12px", color: "#6B7280" }}>
+                Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} of {filtered.length}
+              </span>
+              <div style={{ display: "flex", gap: "6px" }}>
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={safePage === 1}
+                  style={{ display: "flex", alignItems: "center", gap: "4px", padding: "5px 10px", border: "1px solid #E5E7EB", borderRadius: "6px", fontSize: "12px", fontWeight: 500, background: "#fff", color: safePage === 1 ? "#D1D5DB" : "#374151", cursor: safePage === 1 ? "not-allowed" : "pointer" }}
+                >
+                  <ChevronLeft size={13} /> Prev
+                </button>
+                <span style={{ display: "flex", alignItems: "center", padding: "5px 10px", fontSize: "12px", color: "#374151", fontWeight: 600 }}>
+                  {safePage} / {totalPages}
+                </span>
+                <button
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={safePage === totalPages}
+                  style={{ display: "flex", alignItems: "center", gap: "4px", padding: "5px 10px", border: "1px solid #E5E7EB", borderRadius: "6px", fontSize: "12px", fontWeight: 500, background: "#fff", color: safePage === totalPages ? "#D1D5DB" : "#374151", cursor: safePage === totalPages ? "not-allowed" : "pointer" }}
+                >
+                  Next <ChevronRight size={13} />
+                </button>
               </div>
-              <h3 className="text-xl font-bold text-slate-900">No records found</h3>
-              <p className="text-slate-500 mt-1">Try adjusting your search terms or filters.</p>
             </div>
           )}
         </div>

@@ -4,11 +4,9 @@ import { useMemo, useState } from "react";
 import { useAuth } from "../../../context/AuthContext";
 import DashboardLayout from "../../../layouts/DashboardLayout";
 import { useTeacherContent } from "../../../hooks/useContent";
-import { SkeletonCard } from "../../../components/SkeletonCard";
 import { ApprovalBadge, ScheduleBadge } from "../../../components/StatusBadge";
-import { EmptyState, ErrorState } from "../../../components/EmptyState";
-import { motion, AnimatePresence } from "framer-motion";
-import { Search, Calendar, Clock, AlertCircle, ExternalLink } from "lucide-react";
+import { SkeletonCard } from "../../../components/SkeletonCard";
+import { Search, Plus, Calendar, Clock, AlertCircle, ExternalLink, Inbox } from "lucide-react";
 import Link from "next/link";
 
 export default function MyContentPage() {
@@ -17,148 +15,133 @@ export default function MyContentPage() {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
 
-  const filteredContent = useMemo(() => {
-    return content.filter((item) => {
-      const matchesFilter = filter === "all" || item.status === filter;
-      const matchesSearch = item.title.toLowerCase().includes(search.toLowerCase());
-      return matchesFilter && matchesSearch;
-    });
-  }, [content, filter, search]);
+  const filtered = useMemo(() => content.filter(item => {
+    const matchFilter = filter === "all" || item.status === filter;
+    const matchSearch = item.title.toLowerCase().includes(search.toLowerCase());
+    return matchFilter && matchSearch;
+  }), [content, filter, search]);
+
+  const filters = ["all", "approved", "pending", "rejected"];
 
   return (
     <DashboardLayout>
-      <div className="space-y-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
           <div>
-            <h1 className="text-4xl font-black tracking-tight text-slate-900">My Broadcasts</h1>
-            <p className="text-slate-500 mt-1 font-medium">Manage and monitor your uploaded lessons.</p>
+            <h1 style={{ fontSize: "18px", fontWeight: 700, color: "#111827" }}>My Content</h1>
+            <p style={{ fontSize: "13px", color: "#6B7280", marginTop: "2px" }}>{content.length} total uploads</p>
           </div>
-          <Link
-            href="/teacher/upload"
-            className="px-6 py-3 rounded-2xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 text-center w-fit"
-          >
-            Upload New
+          <Link href="/teacher/upload" style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "7px 14px", background: "#2563EB", color: "#fff", fontSize: "13px", fontWeight: 600, borderRadius: "7px", textDecoration: "none" }}>
+            <Plus size={14} /> Upload New
           </Link>
         </div>
 
         {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
+          <div style={{ position: "relative", flex: 1, minWidth: "200px" }}>
+            <Search size={14} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "#9CA3AF" }} />
             <input
               type="text"
-              placeholder="Search your lessons..."
-              className="w-full bg-white border border-slate-200 rounded-2xl py-3 pl-12 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all"
+              placeholder="Search content..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={e => setSearch(e.target.value)}
+              style={{ width: "100%", padding: "8px 12px 8px 32px", border: "1px solid #E5E7EB", borderRadius: "7px", fontSize: "13px", color: "#111827", outline: "none", background: "#fff", boxSizing: "border-box" }}
             />
           </div>
-          <div className="flex gap-2 flex-wrap">
-            {["all", "approved", "pending", "rejected"].map((s) => (
+          <div style={{ display: "flex", gap: "6px" }}>
+            {filters.map(f => (
               <button
-                key={s}
-                onClick={() => setFilter(s)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest border transition-all ${
-                  filter === s
-                    ? "bg-blue-600 text-white border-blue-600 shadow-md"
-                    : "bg-white text-slate-500 border-slate-200 hover:border-blue-300"
-                }`}
+                key={f}
+                onClick={() => setFilter(f)}
+                style={{
+                  padding: "6px 12px", borderRadius: "7px", fontSize: "12px", fontWeight: 600,
+                  cursor: "pointer", textTransform: "capitalize", border: "1px solid",
+                  background: filter === f ? "#2563EB" : "#fff",
+                  color: filter === f ? "#fff" : "#6B7280",
+                  borderColor: filter === f ? "#2563EB" : "#E5E7EB",
+                }}
               >
-                {s}
+                {f}
               </button>
             ))}
           </div>
         </div>
 
-        {error && <ErrorState message={error} onRetry={refetch} />}
+        {/* Error */}
+        {error && (
+          <div style={{ padding: "12px 16px", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
+            <AlertCircle size={15} color="#EF4444" />
+            <span style={{ fontSize: "13px", color: "#DC2626" }}>{error}</span>
+            <button onClick={refetch} style={{ marginLeft: "auto", fontSize: "12px", color: "#2563EB", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>Retry</button>
+          </div>
+        )}
 
-        {/* Content Grid */}
+        {/* Grid */}
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {[1, 2, 3].map((i) => <SkeletonCard key={i} />)}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
+            {[1,2,3].map(i => <SkeletonCard key={i} />)}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 20px", background: "#fff", border: "1px solid #E5E7EB", borderRadius: "10px", textAlign: "center" }}>
+            <Inbox size={32} color="#D1D5DB" style={{ marginBottom: "12px" }} />
+            <p style={{ fontSize: "14px", fontWeight: 600, color: "#374151" }}>No content found</p>
+            <p style={{ fontSize: "13px", color: "#9CA3AF", marginTop: "4px" }}>Try a different filter or upload new content</p>
           </div>
         ) : (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              <AnimatePresence mode="popLayout">
-                {filteredContent.map((item) => (
-                  <motion.div
-                    key={item.id}
-                    layout
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden flex flex-col group hover:shadow-xl hover:shadow-blue-900/5 transition-all duration-300"
-                  >
-                    <div className="relative aspect-video overflow-hidden">
-                      <img
-                        src={item.fileUrl}
-                        alt={item.title}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                        loading="lazy"
-                      />
-                      <div className="absolute top-4 right-4">
-                        <ApprovalBadge status={item.status} />
-                      </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
+            {filtered.map(item => (
+              <div key={item.id} style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: "10px", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                {/* Thumbnail */}
+                <div style={{ position: "relative", aspectRatio: "16/9", overflow: "hidden", background: "#F3F4F6" }}>
+                  <img src={item.fileUrl} alt={item.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />
+                  <div style={{ position: "absolute", top: "10px", right: "10px" }}>
+                    <ApprovalBadge status={item.status} />
+                  </div>
+                </div>
+
+                {/* Info */}
+                <div style={{ padding: "14px", flex: 1, display: "flex", flexDirection: "column", gap: "10px" }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "8px" }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: "11px", fontWeight: 600, color: "#2563EB", textTransform: "uppercase", letterSpacing: "0.04em" }}>{item.subject}</p>
+                      <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#111827", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.title}</h3>
                     </div>
+                    <ScheduleBadge startTime={item.startTime} endTime={item.endTime} />
+                  </div>
 
-                    <div className="p-6 flex-1 flex flex-col">
-                      <div className="flex-1 space-y-3">
-                        <div className="flex items-center justify-between flex-wrap gap-2">
-                          <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">
-                            {item.subject}
-                          </span>
-                          <ScheduleBadge startTime={item.startTime} endTime={item.endTime} />
-                        </div>
-                        <h3 className="text-xl font-bold text-slate-900 line-clamp-1">{item.title}</h3>
-                        <p className="text-sm text-slate-500 line-clamp-2 leading-relaxed">{item.description}</p>
+                  <p style={{ fontSize: "12px", color: "#6B7280", lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{item.description}</p>
 
-                        <div className="pt-2 space-y-2">
-                          <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
-                            <Calendar className="w-4 h-4 text-slate-400" />
-                            Starts: {new Date(item.startTime).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
-                            <Clock className="w-4 h-4 text-slate-400" />
-                            Ends: {new Date(item.endTime).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}
-                          </div>
-                        </div>
-                      </div>
-
-                      {item.status === "approved" && (
-                        <div className="mt-6 pt-6 border-t border-slate-50">
-                          <Link
-                            href={`/live/${user?.id}`}
-                            className="w-full py-3 rounded-xl bg-blue-50 text-blue-600 font-bold text-sm flex items-center justify-center gap-2 hover:bg-blue-600 hover:text-white transition-all group/btn"
-                          >
-                            View in Live Room
-                            <ExternalLink className="w-4 h-4 group-hover/btn:translate-x-1 group-hover/btn:-translate-y-1 transition-transform" />
-                          </Link>
-                        </div>
-                      )}
-
-                      {item.status === "rejected" && (
-                        <div className="mt-4 p-4 rounded-2xl bg-red-50 border border-red-100">
-                          <div className="flex items-center gap-2 text-red-600 font-bold text-xs mb-1">
-                            <AlertCircle className="w-3.5 h-3.5" /> Rejection Feedback:
-                          </div>
-                          <p className="text-xs text-red-500 italic">"{item.rejectionReason}"</p>
-                        </div>
-                      )}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", color: "#9CA3AF" }}>
+                      <Calendar size={11} />
+                      <span>Start: {new Date(item.startTime).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}</span>
                     </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", color: "#9CA3AF" }}>
+                      <Clock size={11} />
+                      <span>End: {new Date(item.endTime).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}</span>
+                    </div>
+                  </div>
 
-            {!loading && filteredContent.length === 0 && (
-              <EmptyState
-                title="No content found"
-                message="Try adjusting your filters or upload new content."
-                icon={Search}
-              />
-            )}
-          </>
+                  {item.status === "approved" && (
+                    <Link href={`/live/${user?.id}`} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", padding: "7px", background: "#EFF6FF", color: "#2563EB", fontSize: "12px", fontWeight: 600, borderRadius: "7px", textDecoration: "none", marginTop: "auto" }}>
+                      View Live <ExternalLink size={11} />
+                    </Link>
+                  )}
+
+                  {item.status === "rejected" && item.rejectionReason && (
+                    <div style={{ padding: "10px", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "7px", marginTop: "auto" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "11px", fontWeight: 600, color: "#DC2626", marginBottom: "4px" }}>
+                        <AlertCircle size={11} /> Rejection reason
+                      </div>
+                      <p style={{ fontSize: "11px", color: "#EF4444", fontStyle: "italic" }}>"{item.rejectionReason}"</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </DashboardLayout>

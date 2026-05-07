@@ -6,11 +6,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuth } from "../../../context/AuthContext";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { LogIn, Mail, Lock, ShieldCheck, User, Loader2, AlertCircle } from "lucide-react";
+import { Radio, Loader2, AlertCircle } from "lucide-react";
 
-const loginSchema = z.object({
-  email: z.string().min(1, "Email is required").email("Enter a valid email address"),
+const schema = z.object({
+  email: z.string().min(1, "Email is required").email("Enter a valid email"),
   password: z.string().min(1, "Password is required"),
 });
 
@@ -19,12 +18,9 @@ export default function LoginPage() {
   const router = useRouter();
   const [serverError, setServerError] = useState("");
 
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    formState: { errors, isSubmitting },
-  } = useForm({ resolver: zodResolver(loginSchema) });
+  const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm({
+    resolver: zodResolver(schema),
+  });
 
   const onSubmit = async ({ email, password }) => {
     setServerError("");
@@ -50,102 +46,82 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 relative overflow-hidden">
-      <div className="absolute top-0 -left-20 w-96 h-96 bg-blue-100 rounded-full blur-[120px] opacity-60" />
-      <div className="absolute bottom-0 -right-20 w-96 h-96 bg-indigo-100 rounded-full blur-[120px] opacity-60" />
+    <div style={{ minHeight: "100vh", background: "#F4F5F7", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
+      <div style={{ width: "100%", maxWidth: "380px" }}>
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md relative z-10"
-      >
-        <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-2xl shadow-blue-900/5">
-          <div className="text-center mb-10">
-            <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-blue-200 rotate-3 transition-transform hover:rotate-0">
-              <ShieldCheck className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Welcome Back</h1>
-            <p className="text-slate-500 mt-2">Sign in to your StudioX account</p>
+        {/* Logo */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", marginBottom: "28px" }}>
+          <div style={{ width: "36px", height: "36px", background: "#2563EB", borderRadius: "9px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px rgba(37,99,235,0.3)" }}>
+            <Radio size={18} color="#fff" />
+          </div>
+          <span style={{ fontSize: "20px", fontWeight: 800, color: "#111827" }}>StudioX</span>
+        </div>
+
+        {/* Card */}
+        <div className="card" style={{ padding: "28px" }}>
+          <div style={{ marginBottom: "20px" }}>
+            <h1 style={{ fontSize: "18px", fontWeight: 700, color: "#111827" }}>Sign in to your account</h1>
+            <p style={{ fontSize: "13px", color: "#6B7280", marginTop: "4px" }}>Enter your credentials to continue</p>
           </div>
 
           {serverError && (
-            <motion.div
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-6 p-4 rounded-2xl bg-red-50 border border-red-100 flex items-center gap-3 text-red-600 text-sm font-semibold"
-            >
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              {serverError}
-            </motion.div>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: "10px", padding: "10px 12px", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "8px", marginBottom: "16px" }}>
+              <AlertCircle size={15} color="#EF4444" style={{ flexShrink: 0, marginTop: "1px" }} />
+              <span style={{ fontSize: "13px", color: "#DC2626" }}>{serverError}</span>
+            </div>
           )}
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
-            <div className="space-y-1.5">
-              <label className="text-sm font-bold text-slate-700 ml-1">Email Address</label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <input
-                  type="email"
-                  {...register("email")}
-                  className={`w-full bg-slate-50 border rounded-2xl py-4 pl-12 pr-4 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all placeholder:text-slate-400 ${errors.email ? "border-red-300 bg-red-50" : "border-slate-200"}`}
-                  placeholder="name@school.com"
-                />
-              </div>
-              {errors.email && (
-                <p className="text-xs text-red-500 font-semibold ml-1">{errors.email.message}</p>
-              )}
+          <form onSubmit={handleSubmit(onSubmit)} noValidate style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            <div>
+              <label className="field-label">Email address</label>
+              <input
+                type="email"
+                {...register("email")}
+                placeholder="you@school.com"
+                className={`field-input ${errors.email ? "error" : ""}`}
+              />
+              {errors.email && <p className="field-error">{errors.email.message}</p>}
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-sm font-bold text-slate-700 ml-1">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <input
-                  type="password"
-                  {...register("password")}
-                  className={`w-full bg-slate-50 border rounded-2xl py-4 pl-12 pr-4 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all placeholder:text-slate-400 ${errors.password ? "border-red-300 bg-red-50" : "border-slate-200"}`}
-                  placeholder="••••••••"
-                />
-              </div>
-              {errors.password && (
-                <p className="text-xs text-red-500 font-semibold ml-1">{errors.password.message}</p>
-              )}
+            <div>
+              <label className="field-label">Password</label>
+              <input
+                type="password"
+                {...register("password")}
+                placeholder="••••••••"
+                className={`field-input ${errors.password ? "error" : ""}`}
+              />
+              {errors.password && <p className="field-error">{errors.password.message}</p>}
             </div>
 
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold py-4 rounded-2xl shadow-xl shadow-blue-200 transition-all flex items-center justify-center gap-2 group"
+              className="btn-primary"
+              style={{ width: "100%", padding: "9px", marginTop: "4px", opacity: isSubmitting ? 0.6 : 1, cursor: isSubmitting ? "not-allowed" : "pointer" }}
             >
-              {isSubmitting ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <>Sign In <LogIn className="w-5 h-5 group-hover:translate-x-1 transition-transform" /></>
-              )}
+              {isSubmitting ? <Loader2 size={15} className="animate-spin" /> : "Sign in"}
             </button>
           </form>
 
-          <div className="mt-10 pt-8 border-t border-slate-100 space-y-4">
-            <p className="text-center text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Quick Access Demo</p>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => demoLogin("teacher")}
-                disabled={isSubmitting}
-                className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-slate-50 border border-slate-200 hover:bg-slate-100 transition-all text-xs font-bold text-slate-700 disabled:opacity-50"
-              >
-                <User className="w-4 h-4 text-blue-600" /> Teacher
+          {/* Demo */}
+          <div style={{ marginTop: "20px", paddingTop: "20px", borderTop: "1px solid #F3F4F6" }}>
+            <p style={{ fontSize: "11px", color: "#9CA3AF", textAlign: "center", marginBottom: "10px", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em" }}>Quick demo access</p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+              <button onClick={() => demoLogin("teacher")} disabled={isSubmitting} className="btn-secondary" style={{ opacity: isSubmitting ? 0.5 : 1 }}>
+                👨‍🏫 Teacher
               </button>
-              <button
-                onClick={() => demoLogin("principal")}
-                disabled={isSubmitting}
-                className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-slate-50 border border-slate-200 hover:bg-slate-100 transition-all text-xs font-bold text-slate-700 disabled:opacity-50"
-              >
-                <ShieldCheck className="w-4 h-4 text-indigo-600" /> Principal
+              <button onClick={() => demoLogin("principal")} disabled={isSubmitting} className="btn-secondary" style={{ opacity: isSubmitting ? 0.5 : 1 }}>
+                🏫 Principal
               </button>
             </div>
           </div>
         </div>
-      </motion.div>
+
+        <p style={{ textAlign: "center", fontSize: "12px", color: "#9CA3AF", marginTop: "20px" }}>
+          StudioX · Educational Broadcasting Platform
+        </p>
+      </div>
     </div>
   );
 }

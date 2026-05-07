@@ -32,6 +32,8 @@ export function useApprovals() {
     try {
       await approvalService.approve(id);
       setData((prev) => prev.filter((c) => c.id !== id));
+    } catch (err) {
+      throw err;
     } finally {
       setActionLoading(false);
     }
@@ -42,10 +44,12 @@ export function useApprovals() {
     try {
       await approvalService.reject(id, reason);
       setData((prev) => prev.filter((c) => c.id !== id));
+    } catch (err) {
+      throw err;
     } finally {
       setActionLoading(false);
     }
   };
 
-  return { data, loading, error, actionLoading, approve, reject };
+  return { data, loading, error, actionLoading, approve, reject, refetch: fetch };
 }

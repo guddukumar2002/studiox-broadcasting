@@ -1,7 +1,17 @@
 /**
  * approval.service.js
  * All approval/rejection operations go through here.
- * To connect a real backend: replace with axios.patch('/api/content/:id/approve', ...)
+ *
+ * To connect a real backend, replace mock logic with axios:
+ *   import axios from "axios";
+ *   import { authService } from "./auth.service";
+ *
+ *   // Attach token to every request:
+ *   axios.interceptors.request.use((config) => {
+ *     const token = authService.getToken();
+ *     if (token) config.headers.Authorization = `Bearer ${token}`;
+ *     return config;
+ *   });
  */
 
 import { getStore, saveStore } from "../utils/mockData";
@@ -20,7 +30,7 @@ export const approvalService = {
     const store = getStore();
     const index = store.content.findIndex((c) => c.id === id);
     if (index === -1) throw new Error("Content not found");
-    store.content[index].status = "approved";
+    store.content[index] = { ...store.content[index], status: "approved" };
     saveStore(store);
     return store.content[index];
   },
@@ -32,8 +42,7 @@ export const approvalService = {
     const store = getStore();
     const index = store.content.findIndex((c) => c.id === id);
     if (index === -1) throw new Error("Content not found");
-    store.content[index].status = "rejected";
-    store.content[index].rejectionReason = reason;
+    store.content[index] = { ...store.content[index], status: "rejected", rejectionReason: reason };
     saveStore(store);
     return store.content[index];
   },

@@ -3,215 +3,171 @@
 import { useState } from "react";
 import DashboardLayout from "../../../layouts/DashboardLayout";
 import { useApprovals } from "../../../hooks/useApprovals";
-import { SkeletonCard } from "../../../components/SkeletonCard";
-import { EmptyState, ErrorState } from "../../../components/EmptyState";
-import { motion, AnimatePresence } from "framer-motion";
-import { Check, X, Calendar, User, Clock, MessageSquare, AlertCircle, Loader2 } from "lucide-react";
+import { ApprovalBadge, ScheduleBadge } from "../../../components/StatusBadge";
+import { Check, X, Calendar, Clock, User, MessageSquare, AlertCircle, Loader2, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 
 export default function PendingApprovals() {
-  const { data: items, loading, error, actionLoading, approve, reject } = useApprovals();
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [rejectionReason, setRejectionReason] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { data: items, loading, error, actionLoading, approve, reject, refetch } = useApprovals();
+  const [selected, setSelected] = useState(null);
+  const [reason, setReason] = useState("");
+  const [modal, setModal] = useState(false);
 
   const handleApprove = async (id) => {
-    try {
-      await approve(id);
-      toast.success("Content approved successfully!");
-    } catch (err) {
-      toast.error(err.message || "Approval failed.");
-    }
+    try { await approve(id); toast.success("Content approved!"); }
+    catch (err) { toast.error(err.message); }
   };
 
-  const openRejectModal = (item) => {
-    setSelectedItem(item);
-    setRejectionReason("");
-    setIsModalOpen(true);
-  };
+  const openReject = (item) => { setSelected(item); setReason(""); setModal(true); };
 
   const handleReject = async () => {
-    if (!rejectionReason.trim()) {
-      toast.error("Please provide a rejection reason.");
-      return;
-    }
+    if (!reason.trim()) { toast.error("Reason is required."); return; }
     try {
-      await reject(selectedItem.id, rejectionReason);
-      toast.success("Content rejected with feedback.");
-      setIsModalOpen(false);
-      setSelectedItem(null);
-    } catch (err) {
-      toast.error(err.message || "Rejection failed.");
-    }
+      await reject(selected.id, reason);
+      toast.success("Rejected with feedback.");
+      setModal(false);
+    } catch (err) { toast.error(err.message); }
   };
 
   return (
     <DashboardLayout>
-      <div className="space-y-8">
+      <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+
+        {/* Header */}
         <div>
-          <h1 className="text-4xl font-black tracking-tight text-slate-900">Pending Approvals</h1>
-          <p className="text-slate-500 mt-1 font-medium">Review submitted content before it goes live.</p>
+          <h1 style={{ fontSize: "18px", fontWeight: 700, color: "#111827" }}>Pending Approvals</h1>
+          <p style={{ fontSize: "13px", color: "#6B7280", marginTop: "2px" }}>Review and action submitted content</p>
         </div>
 
-        {error && <ErrorState message={error} />}
+        {/* Error */}
+        {error && (
+          <div style={{ padding: "12px 16px", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
+            <AlertCircle size={15} color="#EF4444" />
+            <span style={{ fontSize: "13px", color: "#DC2626" }}>{error}</span>
+            <button onClick={refetch} style={{ marginLeft: "auto", fontSize: "12px", color: "#2563EB", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>Retry</button>
+          </div>
+        )}
 
+        {/* Loading */}
         {loading ? (
-          <div className="grid grid-cols-1 gap-6">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white p-6 rounded-[2.5rem] border border-slate-100 animate-pulse flex gap-8">
-                <div className="w-56 aspect-video rounded-3xl bg-slate-100 flex-shrink-0" />
-                <div className="flex-1 space-y-3 py-2">
-                  <div className="h-3 bg-slate-100 rounded-full w-1/4" />
-                  <div className="h-6 bg-slate-100 rounded-full w-3/4" />
-                  <div className="h-4 bg-slate-100 rounded-full w-full" />
-                  <div className="h-4 bg-slate-100 rounded-full w-2/3" />
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            {[1,2,3].map(i => (
+              <div key={i} style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: "10px", padding: "20px", display: "flex", gap: "20px" }}>
+                <div style={{ width: "160px", aspectRatio: "16/9", background: "#F3F4F6", borderRadius: "8px", flexShrink: 0 }} />
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "8px", paddingTop: "4px" }}>
+                  <div style={{ height: "10px", background: "#F3F4F6", borderRadius: "4px", width: "25%" }} />
+                  <div style={{ height: "16px", background: "#F3F4F6", borderRadius: "4px", width: "70%" }} />
+                  <div style={{ height: "10px", background: "#F3F4F6", borderRadius: "4px", width: "100%" }} />
+                  <div style={{ height: "10px", background: "#F3F4F6", borderRadius: "4px", width: "50%" }} />
                 </div>
               </div>
             ))}
           </div>
         ) : items.length === 0 && !error ? (
-          <div className="bg-white p-20 rounded-[4rem] border border-slate-100 text-center flex flex-col items-center shadow-sm">
-            <div className="w-24 h-24 rounded-full bg-emerald-50 flex items-center justify-center mb-6">
-              <Check className="w-12 h-12 text-emerald-600" />
+          <div style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: "10px", padding: "60px 20px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
+            <div style={{ width: "48px", height: "48px", background: "#ECFDF5", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "12px" }}>
+              <CheckCircle size={24} color="#059669" />
             </div>
-            <h2 className="text-3xl font-bold text-slate-900 mb-2">All Caught Up!</h2>
-            <p className="text-slate-500 max-w-sm font-medium leading-relaxed">
-              There are no pending requests. You've cleared the entire queue!
-            </p>
+            <p style={{ fontSize: "15px", fontWeight: 600, color: "#111827" }}>All caught up!</p>
+            <p style={{ fontSize: "13px", color: "#9CA3AF", marginTop: "4px" }}>No pending content to review</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-6">
-            <AnimatePresence>
-              {items.map((item) => (
-                <motion.div
-                  key={item.id}
-                  layout
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, x: -100 }}
-                  className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col md:flex-row gap-8 items-start md:items-center group hover:border-blue-200 transition-all"
-                >
-                  <div className="w-full md:w-56 aspect-video rounded-3xl overflow-hidden bg-slate-50 border border-slate-100 flex-shrink-0 shadow-inner">
-                    <img src={item.fileUrl} alt={item.title} className="w-full h-full object-cover" loading="lazy" />
-                  </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            {items.map(item => (
+              <div key={item.id} style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: "10px", padding: "20px", display: "flex", flexWrap: "wrap", gap: "20px", alignItems: "flex-start", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
 
-                  <div className="flex-1 space-y-4 min-w-0">
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <span className="text-[10px] font-black uppercase tracking-[0.1em] text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
-                        {item.subject}
-                      </span>
-                      <span className="text-xs text-slate-400 font-bold flex items-center gap-1">
-                        <User className="w-3.5 h-3.5" /> {item.teacherName}
-                      </span>
-                    </div>
-                    <div>
-                      <h3 className="text-2xl font-bold text-slate-900 truncate">{item.title}</h3>
-                      <p className="text-sm text-slate-500 line-clamp-2 mt-1 leading-relaxed">{item.description}</p>
-                    </div>
-                    <div className="flex flex-wrap gap-6 pt-2">
-                      <div className="flex items-center gap-2 text-xs text-slate-400 font-bold">
-                        <Calendar className="w-4 h-4" />
-                        {new Date(item.startTime).toLocaleDateString()}
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-slate-400 font-bold">
-                        <Clock className="w-4 h-4" />
-                        {new Date(item.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} –{" "}
-                        {new Date(item.endTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                      </div>
-                    </div>
-                  </div>
+                {/* Thumbnail */}
+                <div style={{ width: "160px", aspectRatio: "16/9", borderRadius: "8px", overflow: "hidden", background: "#F3F4F6", flexShrink: 0, border: "1px solid #E5E7EB" }}>
+                  <img src={item.fileUrl} alt={item.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />
+                </div>
 
-                  <div className="flex md:flex-col gap-3 w-full md:w-auto">
-                    <button
-                      onClick={() => handleApprove(item.id)}
-                      disabled={actionLoading}
-                      className="flex-1 md:w-36 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm shadow-lg shadow-emerald-100 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                    >
-                      {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4" /> Approve</>}
-                    </button>
-                    <button
-                      onClick={() => openRejectModal(item)}
-                      disabled={actionLoading}
-                      className="flex-1 md:w-36 py-3 rounded-2xl bg-slate-50 hover:bg-red-50 text-slate-500 hover:text-red-600 border border-slate-100 hover:border-red-100 font-bold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                    >
-                      <X className="w-4 h-4" /> Reject
-                    </button>
+                {/* Details */}
+                <div style={{ flex: 1, minWidth: "200px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                    <ApprovalBadge status="pending" />
+                    <ScheduleBadge startTime={item.startTime} endTime={item.endTime} />
                   </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+                  <h3 style={{ fontSize: "15px", fontWeight: 700, color: "#111827" }}>{item.title}</h3>
+                  <p style={{ fontSize: "13px", color: "#6B7280", lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{item.description}</p>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "14px", fontSize: "12px", color: "#9CA3AF" }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: "4px" }}><User size={12} /> {item.teacherName}</span>
+                    <span style={{ display: "flex", alignItems: "center", gap: "4px" }}><Calendar size={12} /> {new Date(item.startTime).toLocaleDateString()}</span>
+                    <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                      <Clock size={12} />
+                      {new Date(item.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} – {new Date(item.endTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Action buttons */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px", flexShrink: 0, width: "120px" }}>
+                  <button
+                    onClick={() => handleApprove(item.id)}
+                    disabled={actionLoading}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", padding: "8px 12px", background: "#059669", color: "#fff", fontSize: "13px", fontWeight: 600, borderRadius: "7px", border: "none", cursor: actionLoading ? "not-allowed" : "pointer", opacity: actionLoading ? 0.6 : 1 }}
+                  >
+                    {actionLoading ? <Loader2 size={13} style={{ animation: "spin 0.8s linear infinite" }} /> : <><Check size={13} /> Approve</>}
+                  </button>
+                  <button
+                    onClick={() => openReject(item)}
+                    disabled={actionLoading}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", padding: "8px 12px", background: "#fff", color: "#374151", fontSize: "13px", fontWeight: 600, borderRadius: "7px", border: "1px solid #E5E7EB", cursor: actionLoading ? "not-allowed" : "pointer", opacity: actionLoading ? 0.6 : 1 }}
+                  >
+                    <X size={13} /> Reject
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
-
-        {/* Rejection Modal */}
-        <AnimatePresence>
-          {isModalOpen && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setIsModalOpen(false)}
-                className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
-              />
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                className="relative w-full max-w-lg bg-white p-10 rounded-[3rem] border border-slate-100 shadow-2xl"
-              >
-                <div className="flex items-center justify-between mb-8">
-                  <h3 className="text-2xl font-bold text-slate-900">Rejection Feedback</h3>
-                  <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-50 rounded-full text-slate-400">
-                    <X className="w-6 h-6" />
-                  </button>
-                </div>
-
-                <div className="space-y-6">
-                  <div className="p-5 rounded-2xl bg-amber-50 border border-amber-100 flex items-start gap-3">
-                    <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm font-bold text-amber-900">Why are you rejecting this?</p>
-                      <p className="text-xs text-amber-700 mt-1">
-                        This feedback will be sent directly to the teacher so they can correct it.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700 flex items-center gap-2 ml-1">
-                      <MessageSquare className="w-4 h-4 text-blue-600" /> Rejection Reason
-                    </label>
-                    <textarea
-                      rows="5"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-3xl py-5 px-6 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all resize-none"
-                      placeholder="e.g. Please use a higher resolution image for the preview..."
-                      value={rejectionReason}
-                      onChange={(e) => setRejectionReason(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="mt-10 flex gap-4">
-                  <button
-                    onClick={() => setIsModalOpen(false)}
-                    className="flex-1 py-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold transition-all"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleReject}
-                    disabled={actionLoading}
-                    className="flex-1 py-4 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold shadow-lg shadow-red-100 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                  >
-                    {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Send Feedback"}
-                  </button>
-                </div>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
       </div>
+
+      {/* Reject Modal */}
+      {modal && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)" }} onClick={() => setModal(false)} />
+          <div style={{ position: "relative", width: "100%", maxWidth: "440px", background: "#fff", borderRadius: "12px", padding: "24px", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
+              <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#111827" }}>Reject Content</h3>
+              <button onClick={() => setModal(false)} style={{ padding: "4px", borderRadius: "6px", border: "none", background: "transparent", cursor: "pointer", color: "#9CA3AF" }}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{ padding: "12px", background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: "8px", display: "flex", alignItems: "flex-start", gap: "10px", marginBottom: "16px" }}>
+              <AlertCircle size={15} color="#D97706" style={{ flexShrink: 0, marginTop: "1px" }} />
+              <p style={{ fontSize: "12px", color: "#92400E" }}>This feedback will be visible to the teacher so they can improve their submission.</p>
+            </div>
+
+            <div style={{ marginBottom: "20px" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", fontWeight: 500, color: "#374151", marginBottom: "6px" }}>
+                <MessageSquare size={13} /> Rejection Reason <span style={{ color: "#EF4444" }}>*</span>
+              </label>
+              <textarea
+                rows={4}
+                value={reason}
+                onChange={e => setReason(e.target.value)}
+                placeholder="Explain why this content is being rejected..."
+                style={{ width: "100%", padding: "10px 12px", border: "1px solid #E5E7EB", borderRadius: "8px", fontSize: "13px", color: "#111827", resize: "none", outline: "none", boxSizing: "border-box" }}
+              />
+            </div>
+
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button onClick={() => setModal(false)} style={{ flex: 1, padding: "9px", background: "#F9FAFB", color: "#374151", fontSize: "13px", fontWeight: 600, borderRadius: "7px", border: "1px solid #E5E7EB", cursor: "pointer" }}>
+                Cancel
+              </button>
+              <button
+                onClick={handleReject}
+                disabled={actionLoading}
+                style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", padding: "9px", background: "#DC2626", color: "#fff", fontSize: "13px", fontWeight: 600, borderRadius: "7px", border: "none", cursor: actionLoading ? "not-allowed" : "pointer", opacity: actionLoading ? 0.6 : 1 }}
+              >
+                {actionLoading ? <Loader2 size={13} style={{ animation: "spin 0.8s linear infinite" }} /> : "Send Feedback"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </DashboardLayout>
   );
 }

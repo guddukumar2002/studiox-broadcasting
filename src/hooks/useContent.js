@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { contentService } from "../services/content.service";
+import { useAuth } from "../context/AuthContext";
 
 export function useTeacherContent(teacherId) {
   const [data, setData] = useState([]);
@@ -79,4 +80,31 @@ export function useLiveContent(teacherId) {
   }, [fetch]);
 
   return { data, loading, error };
+}
+
+export function useCreateContent() {
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const create = useCallback(async (payload) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await contentService.create({
+        ...payload,
+        teacherId: user?.id,
+        teacherName: user?.name,
+      });
+      return result;
+    } catch (err) {
+      const msg = err.message || "Upload failed.";
+      setError(msg);
+      throw new Error(msg);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  return { create, loading, error };
 }

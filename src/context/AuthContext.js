@@ -12,9 +12,14 @@ export const AuthProvider = ({ children }) => {
   const router = useRouter();
 
   useEffect(() => {
-    const savedUser = authService.getSavedUser();
-    if (savedUser) setUser(savedUser);
-    setLoading(false);
+    try {
+      const savedUser = authService.getSavedUser();
+      if (savedUser) setUser(savedUser);
+    } catch (e) {
+      // ignore corrupted storage
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   const login = async (email, password) => {

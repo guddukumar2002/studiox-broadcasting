@@ -7,13 +7,19 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
   title: "StudioX | Content Broadcasting System",
-  description: "Premium educational content broadcasting and management system",
+  description: "Educational content broadcasting and management system for teachers and principals.",
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#2563EB",
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <body className={`${inter.className} bg-slate-50 text-slate-900 selection:bg-blue-100 antialiased`}>
+    <html lang="en" className="h-full">
+      <body className={`${inter.className} h-full bg-[#F4F5F7] text-gray-900 antialiased selection:bg-blue-100`}>
         <AuthProvider>
           {children}
           <Toaster position="top-right" richColors closeButton theme="light" />

@@ -1,59 +1,76 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
-import { 
-  LayoutDashboard, 
-  Upload, 
-  FileText, 
-  CheckCircle, 
-  LogOut, 
-  Bell, 
-  Search, 
-  User, 
-  Radio 
+import {
+  LayoutDashboard, Upload, FileText, CheckCircle,
+  LogOut, User, Radio, Menu, X, ChevronRight,
 } from "lucide-react";
+import Link from "next/link";
 
-function NavLink({ href, icon: Icon, label, active, isBottom = false }) {
-  const router = useRouter();
-  
-  if (isBottom) {
-    const shortLabel = label.split(' ')[0];
-    return (
-      <button
-        onClick={() => router.push(href)}
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '4px',
-          flex: 1,
-          padding: '8px 0',
-          color: active ? '#2563eb' : '#94a3b8',
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer'
-        }}
-      >
-        <Icon size={20} fill={active ? 'rgba(37, 99, 235, 0.1)' : 'none'} />
-        <span style={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase' }}>{shortLabel}</span>
-      </button>
-    );
-  }
-
+function NavItem({ href, label, icon: Icon, active }) {
   return (
-    <button
-      onClick={() => router.push(href)}
-      className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all duration-200 group ${
-        active 
-        ? "bg-blue-600 text-white shadow-lg shadow-blue-200" 
-        : "text-slate-500 hover:bg-slate-50 hover:text-blue-600"
+    <Link
+      href={href}
+      className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors duration-150 ${
+        active
+          ? "bg-blue-600 text-white"
+          : "text-gray-500 hover:bg-gray-100 hover:text-gray-800"
       }`}
     >
-      <Icon size={20} className={active ? "text-white" : "text-slate-400 group-hover:text-blue-600 transition-colors"} />
-      <span className="font-bold text-sm">{label}</span>
-    </button>
+      <Icon size={15} className="shrink-0" />
+      <span>{label}</span>
+    </Link>
+  );
+}
+
+function Sidebar({ links, pathname, user, logout }) {
+  return (
+    <div className="flex flex-col h-full bg-white border-r border-gray-200">
+      {/* Logo */}
+      <div className="flex items-center gap-2.5 px-4 h-14 border-b border-gray-100 shrink-0">
+        <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center shrink-0">
+          <Radio size={14} className="text-white" />
+        </div>
+        <div>
+          <p className="text-[14px] font-bold text-gray-900 leading-tight">StudioX</p>
+          <p className="text-[10px] text-gray-400 leading-tight">Broadcasting System</p>
+        </div>
+      </div>
+
+      {/* Nav */}
+      <div className="flex-1 overflow-y-auto px-2 py-3">
+        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest px-2.5 mb-2">
+          {user?.role === "teacher" ? "Teacher" : "Principal"}
+        </p>
+        <div className="flex flex-col gap-0.5">
+          {links.map(link => (
+            <NavItem key={link.href} {...link} active={pathname === link.href} />
+          ))}
+        </div>
+      </div>
+
+      {/* User + logout */}
+      <div className="px-2 py-3 border-t border-gray-100 shrink-0">
+        <div className="flex items-center gap-2.5 px-2.5 py-2 bg-gray-50 rounded-lg mb-1">
+          <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+            <User size={13} className="text-blue-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] font-semibold text-gray-900 truncate">{user?.name}</p>
+            <p className="text-[11px] text-gray-400 capitalize">{user?.role}</p>
+          </div>
+        </div>
+        <button
+          onClick={logout}
+          className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[13px] font-medium text-gray-500 hover:bg-red-50 hover:text-red-600 transition-colors duration-150"
+        >
+          <LogOut size={14} />
+          Sign out
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -61,166 +78,158 @@ export default function DashboardLayout({ children }) {
   const { user, logout, loading } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
-  const [isMobile, setIsMobile] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
+  // Auth guard
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push("/auth/login");
-    }
+    if (!loading && !user) router.push("/auth/login");
   }, [user, loading, router]);
+
+  // Role guard
+  useEffect(() => {
+    if (!loading && user) {
+      if (user.role === "teacher" && pathname.startsWith("/principal")) router.replace("/teacher/dashboard");
+      if (user.role === "principal" && pathname.startsWith("/teacher")) router.replace("/principal/dashboard");
+    }
+  }, [user, loading, pathname, router]);
+
+  // Close drawer on route change
+  useEffect(() => { setDrawerOpen(false); }, [pathname]);
+
+  // Lock body scroll when drawer is open
+  useEffect(() => {
+    document.body.style.overflow = drawerOpen ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [drawerOpen]);
 
   const teacherLinks = [
     { href: "/teacher/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-    { href: "/teacher/upload", icon: Upload, label: "Upload Content" },
-    { href: "/teacher/content", icon: FileText, label: "My Content" },
+    { href: "/teacher/upload",    icon: Upload,          label: "Upload Content" },
+    { href: "/teacher/content",   icon: FileText,        label: "My Content" },
   ];
-
   const principalLinks = [
-    { href: "/principal/dashboard", icon: LayoutDashboard, label: "Overview" },
-    { href: "/principal/pending", icon: CheckCircle, label: "Pending Approvals" },
-    { href: "/principal/all-content", icon: FileText, label: "All Content" },
+    { href: "/principal/dashboard",   icon: LayoutDashboard, label: "Dashboard" },
+    { href: "/principal/pending",     icon: CheckCircle,     label: "Pending Approvals" },
+    { href: "/principal/all-content", icon: FileText,        label: "All Content" },
   ];
-
   const links = user?.role === "teacher" ? teacherLinks : principalLinks;
+  const currentLabel = links.find(l => l.href === pathname)?.label ?? "Dashboard";
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="w-10 h-10 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+  if (loading) return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-8 h-8 border-2 border-blue-100 border-t-blue-600 rounded-full animate-spin" />
+        <p className="text-[12px] font-semibold text-gray-400 uppercase tracking-widest">Loading...</p>
       </div>
-    );
-  }
+    </div>
+  );
+
+  if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex overflow-hidden">
-      <style jsx global>{`
-        @media (min-width: 768px) {
-          .pc-sidebar { display: flex !important; }
-          .mobile-nav { display: none !important; }
-          .main-content { padding-bottom: 0 !important; }
-        }
-        @media (max-width: 767px) {
-          .pc-sidebar { display: none !important; }
-          .mobile-nav { display: flex !important; }
-          .main-content { padding-bottom: 80px !important; }
-        }
-      `}</style>
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
 
-      {/* PC Sidebar - Forced to left with CSS */}
-      <aside className="pc-sidebar w-72 lg:w-80 bg-white border-r border-slate-200 flex-shrink-0 h-screen sticky top-0 flex-col p-8 shadow-sm z-30">
-        <div className="flex items-center gap-3 mb-12 px-2">
-          <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-200">
-            <Radio size={28} className="text-white" />
-          </div>
-          <span className="text-2xl font-black tracking-tight text-slate-900">StudioX</span>
-        </div>
-
-        <div className="flex-1 space-y-2 overflow-y-auto custom-scrollbar pr-2">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-4 mb-6">Main Menu</p>
-          {links.map((link) => (
-            <NavLink
-              key={link.href}
-              {...link}
-              active={pathname === link.href}
-            />
-          ))}
-        </div>
-
-        <div className="mt-auto pt-8 border-t border-slate-100">
-          <button
-            onClick={logout}
-            className="w-full flex items-center gap-3 px-4 py-4 rounded-xl text-slate-500 hover:bg-red-50 hover:text-red-600 transition-all duration-200"
-          >
-            <LogOut size={20} />
-            <span className="font-bold text-sm">Logout Session</span>
-          </button>
-          
-          <div className="mt-8 p-5 rounded-3xl bg-slate-50 border border-slate-100 flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center border border-slate-200 shadow-sm">
-              <User size={24} className="text-blue-600" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-black truncate text-slate-900">{user?.name || "User"}</p>
-              <p className="text-[10px] text-blue-600 uppercase font-black tracking-widest leading-none mt-1">{user?.role}</p>
-            </div>
-          </div>
-        </div>
+      {/* ── DESKTOP SIDEBAR ── */}
+      <aside className="hidden md:flex md:w-[220px] md:shrink-0 h-full">
+        <Sidebar links={links} pathname={pathname} user={user} logout={logout} />
       </aside>
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen main-content">
-        <header className="h-24 flex-shrink-0 flex items-center justify-between px-6 lg:px-12 border-b border-slate-200 bg-white/80 backdrop-blur-md z-20 sticky top-0">
-          {/* Logo only on Mobile */}
-          {!isMobile ? null : (
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-200">
-                <Radio size={20} className="text-white" />
-              </div>
-              <span className="text-xl font-black tracking-tighter">STUDIOX</span>
-            </div>
-          )}
+      {/* ── MOBILE DRAWER OVERLAY ── */}
+      {drawerOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setDrawerOpen(false)}
+          />
+          {/* Drawer panel */}
+          <div className="absolute left-0 top-0 w-64 h-full shadow-2xl z-10">
+            <Sidebar links={links} pathname={pathname} user={user} logout={logout} />
+            <button
+              onClick={() => setDrawerOpen(false)}
+              className="absolute top-3 right-3 p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
+            >
+              <X size={15} />
+            </button>
+          </div>
+        </div>
+      )}
 
-          <div className="hidden sm:flex items-center gap-2 bg-slate-100 rounded-2xl px-5 py-3 w-64 lg:w-96 border border-transparent focus-within:border-blue-200 focus-within:bg-white transition-all shadow-inner">
-            <Search size={16} className="text-slate-400" />
-            <input 
-              type="text" 
-              placeholder="Quick search..." 
-              className="bg-transparent border-none focus:outline-none text-sm w-full placeholder:text-slate-500 text-slate-700 font-medium"
-            />
+      {/* ── MAIN AREA ── */}
+      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+
+        {/* Topbar */}
+        <header className="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 shrink-0 z-30">
+
+          {/* Hamburger — mobile only */}
+          <button
+            onClick={() => setDrawerOpen(true)}
+            className="md:hidden p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+          >
+            <Menu size={18} />
+          </button>
+
+          {/* Mobile logo */}
+          <div className="flex md:hidden items-center gap-2">
+            <div className="w-6 h-6 bg-blue-600 rounded-md flex items-center justify-center">
+              <Radio size={12} className="text-white" />
+            </div>
+            <span className="text-[14px] font-bold text-gray-900">StudioX</span>
           </div>
 
-          <div className="flex-1 md:flex-none" />
+          {/* Desktop breadcrumb */}
+          <div className="hidden md:flex items-center gap-1.5 text-[13px] text-gray-400">
+            <span className="capitalize">{user?.role}</span>
+            <ChevronRight size={13} />
+            <span className="font-semibold text-gray-900">{currentLabel}</span>
+          </div>
 
-          <div className="flex items-center gap-4">
-            <button className="relative p-3 rounded-2xl bg-slate-100 text-slate-500 hover:text-blue-600 hover:bg-white hover:shadow-md transition-all border border-transparent">
-              <Bell size={20} />
-              <span className="absolute top-3 right-3 w-2 h-2 bg-blue-600 rounded-full border-2 border-white" />
-            </button>
-            <div className="h-10 w-px bg-slate-200 mx-1 md:mx-2" />
-            <div className="flex items-center gap-3">
-              <div className="hidden xs:block text-right">
-                <p className="text-sm font-black text-slate-900 truncate max-w-[100px] lg:max-w-[150px]">{user?.name}</p>
-                <p className="text-[10px] text-blue-600 uppercase font-black tracking-widest mt-1">{user?.role}</p>
-              </div>
-              <div className="w-11 h-11 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-200 border border-blue-500">
-                <User size={24} className="text-white" />
-              </div>
+          <div className="flex-1" />
+
+          {/* User chip */}
+          <div className="flex items-center gap-2.5">
+            <div className="hidden md:block text-right">
+              <p className="text-[13px] font-semibold text-gray-900 leading-tight">{user?.name}</p>
+              <p className="text-[11px] text-gray-400 capitalize leading-tight">{user?.role}</p>
+            </div>
+            <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center shrink-0">
+              <User size={14} className="text-white" />
             </div>
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-6 md:p-8 lg:p-12 custom-scrollbar">
-          <div className="max-w-7xl mx-auto">
+        {/* Page content */}
+        <main className="flex-1 overflow-y-auto">
+          <div className="max-w-[1100px] mx-auto px-4 md:px-6 py-6 pb-24 md:pb-6">
             {children}
           </div>
         </main>
       </div>
 
-      {/* Mobile Bottom Navigation - Only for screens < 768px */}
-      <nav className="mobile-nav fixed bottom-0 left-0 right-0 h-20 bg-white/95 backdrop-blur-xl border-t border-slate-200 items-center px-4 z-50 shadow-[0_-10px_30px_rgba(0,0,0,0.08)] rounded-t-[2.5rem]">
-        {links.map((link) => (
-          <NavLink
-            key={link.href}
-            {...link}
-            active={pathname === link.href}
-            isBottom={true}
-          />
-        ))}
+      {/* ── MOBILE BOTTOM NAV ── */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex items-center z-40 shadow-[0_-1px_8px_rgba(0,0,0,0.06)]">
+        {links.map(link => {
+          const Icon = link.icon;
+          const active = pathname === link.href;
+          return (
+            <Link
+              key={link.href}
+              href={link.href}
+              className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 text-[11px] font-medium transition-colors ${
+                active ? "text-blue-600" : "text-gray-400 hover:text-gray-600"
+              }`}
+            >
+              <Icon size={19} />
+              <span>{link.label.split(" ")[0]}</span>
+            </Link>
+          );
+        })}
         <button
           onClick={logout}
-          className="flex flex-col items-center gap-1 flex-1 py-2 text-slate-400 bg-none border-none cursor-pointer"
+          className="flex-1 flex flex-col items-center justify-center gap-1 py-2.5 text-[11px] font-medium text-gray-400 hover:text-red-500 transition-colors"
         >
-          <LogOut size={20} />
-          <span className="text-[10px] font-black uppercase tracking-tighter">Exit</span>
+          <LogOut size={19} />
+          <span>Exit</span>
         </button>
       </nav>
     </div>

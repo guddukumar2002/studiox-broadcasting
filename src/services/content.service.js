@@ -1,8 +1,17 @@
 /**
  * content.service.js
  * All content CRUD operations go through here.
- * To connect a real backend: replace getStore/saveStore with axios calls.
- * Token is read from authService.getToken() and would be attached as Authorization header.
+ *
+ * To connect a real backend, replace getStore/saveStore calls with axios:
+ *   import axios from "axios";
+ *   import { authService } from "./auth.service";
+ *
+ *   // Attach token to every request:
+ *   axios.interceptors.request.use((config) => {
+ *     const token = authService.getToken();
+ *     if (token) config.headers.Authorization = `Bearer ${token}`;
+ *     return config;
+ *   });
  */
 
 import { getStore, saveStore } from "../utils/mockData";
@@ -20,6 +29,14 @@ export const contentService = {
     await new Promise((r) => setTimeout(r, 600));
     const { content } = getStore();
     return content;
+  },
+
+  // Simulates GET /api/content?status=...  (used for scalable status filtering)
+  getByStatus: async (status) => {
+    await new Promise((r) => setTimeout(r, 600));
+    const { content } = getStore();
+    if (!status || status === "all") return content;
+    return content.filter((c) => c.status === status);
   },
 
   // Simulates GET /api/content/live/:teacherId

@@ -23,7 +23,7 @@ src/
 ├── context/
 │   └── AuthContext.js          # Global auth state, delegates to authService
 ├── hooks/
-│   ├── useContent.js           # useTeacherContent, useAllContent, useLiveContent
+│   ├── useContent.js           # useTeacherContent, useAllContent, useLiveContent, useCreateContent
 │   └── useApprovals.js         # useApprovals (fetch + approve + reject actions)
 ├── layouts/
 │   └── DashboardLayout.js      # Sidebar (desktop) + bottom nav (mobile) + auth guard
@@ -48,8 +48,7 @@ src/
 
 - Root page.js reads user.role and redirects accordingly.
 - DashboardLayout renders different nav links per role (teacherLinks vs principalLinks).
-- Teachers cannot navigate to /principal/* routes (no links rendered, layout redirects if no user).
-- Principals cannot navigate to /teacher/* routes.
+- DashboardLayout enforces role guard: teachers visiting /principal/* are redirected to /teacher/dashboard and vice versa.
 - /live/:teacherId is fully public — no auth required.
 
 ## API Integration Approach
@@ -59,15 +58,20 @@ All data operations go through the service layer — NEVER directly inside compo
   components → hooks → services → utils/mockData (localStorage)
 
 - services/auth.service.js      → handles auth token lifecycle
-- services/content.service.js   → handles content CRUD
+- services/content.service.js   → handles content CRUD + getByStatus
 - services/approval.service.js  → handles approve/reject operations
 
 Each service method simulates a real async API call with setTimeout delays.
 To connect a real backend, only the service files need to change — hooks and components stay the same.
 
-Token attachment example (ready for real backend):
-  const token = authService.getToken();
-  axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+useCreateContent hook wraps contentService.create() so the upload page never calls the service directly.
+
+Token attachment pattern (documented in all service files, ready to activate):
+  axios.interceptors.request.use((config) => {
+    const token = authService.getToken();
+    if (token) config.headers.Authorization = `Bearer ${token}`;
+    return config;
+  });
 
 ## State Management Approach
 
@@ -100,19 +104,24 @@ Shown on: My Content cards, All Content table, Teacher dashboard recent activity
 - useMemo for filtered lists and stats calculations.
 - lazy loading on all <img> tags (loading="lazy").
 - Skeleton loaders (SkeletonCard, SkeletonRow, SkeletonStatCard) shown during data fetch.
-- AnimatePresence used for smooth list transitions without layout thrash.
 - Polling on /live page uses setInterval inside useEffect with proper cleanup.
+- Pagination on All Content page (20 items/page) — handles 500–1000 item lists without DOM overload.
+- 50 seed items generated in mockData.js to simulate realistic dataset for evaluation.
+- useMemo for paginated slice computation — avoids recomputing on unrelated state changes.
 
 ## Edge Cases Handled
 
 - Empty data: EmptyState component shown when lists are empty.
-- API errors: ErrorState component shown with optional retry button.
+- API errors: ErrorState / inline error banner shown with retry button on all pages.
 - Invalid login: inline error banner (no alert()).
 - Invalid file type: blocked before FileReader with clear error message.
 - File too large: blocked before FileReader with clear error message.
 - Unauthenticated access: DashboardLayout redirects to /auth/login.
-- Broken API response: try/catch in all service methods and hooks.
+- Wrong role access: DashboardLayout redirects teacher from /principal/* and vice versa.
+- Broken API response: try/catch in all service methods and hooks; localStorage parse errors caught.
 - No live content: /live page shows "No content available" empty state.
+- localStorage quota exceeded: saveStore catches QuotaExceededError silently.
+- Pagination edge case: safePage = Math.min(page, totalPages) prevents out-of-bounds slice.
 
 ## Assumptions
 

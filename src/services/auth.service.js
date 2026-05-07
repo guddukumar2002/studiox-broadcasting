@@ -1,7 +1,17 @@
 /**
  * auth.service.js
  * All authentication operations go through here.
- * To connect a real backend: replace the mock logic with axios.post('/api/auth/login', ...)
+ *
+ * To connect a real backend:
+ *   import axios from "axios";
+ *   Replace mock login with: return axios.post('/api/auth/login', { email, password }).then(r => r.data);
+ *
+ * Token attachment (add this once in your app entry or axios setup):
+ *   axios.interceptors.request.use((config) => {
+ *     const token = authService.getToken();
+ *     if (token) config.headers.Authorization = `Bearer ${token}`;
+ *     return config;
+ *   });
  */
 
 const TOKEN_KEY = "auth_token";
