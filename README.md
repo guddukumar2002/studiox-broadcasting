@@ -8,7 +8,7 @@ Teachers upload subject-based content → Principals approve or reject it → St
 
 ## Live Demo
 
-🔗 **Deployment:** *(Coming soon — deploy to Vercel)*
+🔗 **Deployment:** [studiox-broadcasting.vercel.app](https://studiox-broadcasting.vercel.app)
 
 | Role | Email | Password |
 |---|---|---|
