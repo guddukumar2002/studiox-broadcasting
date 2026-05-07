@@ -1,0 +1,124 @@
+# Frontend Implementation Notes — Content Broadcasting System (StudioX)
+
+## Project Structure
+
+src/
+├── app/                        # Next.js App Router pages
+│   ├── auth/login/             # Login page (RHF + Zod)
+│   ├── teacher/
+│   │   ├── dashboard/          # Teacher stats + recent activity
+│   │   ├── upload/             # Content upload form
+│   │   └── content/            # My content list with filters
+│   ├── principal/
+│   │   ├── dashboard/          # Principal overview + pending queue
+│   │   ├── pending/            # Approve / Reject workflow
+│   │   └── all-content/        # Full content table with filters
+│   ├── live/[teacherId]/       # Public broadcast page (no auth)
+│   ├── layout.js               # Root layout with AuthProvider + Toaster
+│   └── page.js                 # Root redirect based on role
+├── components/
+│   ├── SkeletonCard.js         # SkeletonCard, SkeletonRow, SkeletonStatCard
+│   ├── StatusBadge.js          # ApprovalBadge, ScheduleBadge (Scheduled/Active/Expired)
+│   └── EmptyState.js           # EmptyState, ErrorState
+├── context/
+│   └── AuthContext.js          # Global auth state, delegates to authService
+├── hooks/
+│   ├── useContent.js           # useTeacherContent, useAllContent, useLiveContent
+│   └── useApprovals.js         # useApprovals (fetch + approve + reject actions)
+├── layouts/
+│   └── DashboardLayout.js      # Sidebar (desktop) + bottom nav (mobile) + auth guard
+├── services/
+│   ├── auth.service.js         # login, saveSession, clearSession, getToken, getSavedUser
+│   ├── content.service.js      # getByTeacher, getAll, getLiveByTeacher, create
+│   └── approval.service.js     # getPending, approve, reject
+└── utils/
+    └── mockData.js             # LocalStorage persistence layer + seed data
+
+## Authentication Flow
+
+1. User submits email + password on /auth/login (validated with Zod schema via React Hook Form).
+2. authService.login() simulates POST /api/auth/login with a 800ms delay.
+3. On success: token + user object are stored via authService.saveSession() (localStorage).
+4. AuthContext reads the saved session on mount so the session persists across refreshes.
+5. Role-based redirect: teacher → /teacher/dashboard, principal → /principal/dashboard.
+6. On logout: authService.clearSession() wipes localStorage and redirects to /auth/login.
+7. DashboardLayout guards all protected routes — unauthenticated users are redirected to login.
+
+## Role-Based Routing
+
+- Root page.js reads user.role and redirects accordingly.
+- DashboardLayout renders different nav links per role (teacherLinks vs principalLinks).
+- Teachers cannot navigate to /principal/* routes (no links rendered, layout redirects if no user).
+- Principals cannot navigate to /teacher/* routes.
+- /live/:teacherId is fully public — no auth required.
+
+## API Integration Approach
+
+All data operations go through the service layer — NEVER directly inside components:
+
+  components → hooks → services → utils/mockData (localStorage)
+
+- services/auth.service.js      → handles auth token lifecycle
+- services/content.service.js   → handles content CRUD
+- services/approval.service.js  → handles approve/reject operations
+
+Each service method simulates a real async API call with setTimeout delays.
+To connect a real backend, only the service files need to change — hooks and components stay the same.
+
+Token attachment example (ready for real backend):
+  const token = authService.getToken();
+  axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+## State Management Approach
+
+- AuthContext (React Context): global user session state.
+- Custom hooks (useContent, useApprovals): encapsulate loading/error/data per feature.
+- Local component state: UI-only state (filters, search, modal open/close).
+- No prop drilling: hooks are consumed directly in page components.
+- useMemo: used in dashboard and list pages to avoid recomputing filtered/stats data on every render.
+
+## Form Handling
+
+- React Hook Form + Zod used on login and upload pages.
+- Login schema: email (required + valid format), password (required).
+- Upload schema: all fields required, end time > start time (cross-field refinement), rotation min 10s.
+- File validation (outside RHF): type restricted to JPG/PNG/GIF, max 10MB.
+- Inline field-level error messages shown below each input.
+- Server/API errors shown as a banner above the form (not alert()).
+
+## Scheduling Status Indicators
+
+ScheduleBadge component computes status from startTime/endTime at render time:
+  - Scheduled: now < startTime
+  - Active:     startTime <= now <= endTime  (with animated pulse dot)
+  - Expired:    now > endTime
+
+Shown on: My Content cards, All Content table, Teacher dashboard recent activity.
+
+## Performance Considerations
+
+- useMemo for filtered lists and stats calculations.
+- lazy loading on all <img> tags (loading="lazy").
+- Skeleton loaders (SkeletonCard, SkeletonRow, SkeletonStatCard) shown during data fetch.
+- AnimatePresence used for smooth list transitions without layout thrash.
+- Polling on /live page uses setInterval inside useEffect with proper cleanup.
+
+## Edge Cases Handled
+
+- Empty data: EmptyState component shown when lists are empty.
+- API errors: ErrorState component shown with optional retry button.
+- Invalid login: inline error banner (no alert()).
+- Invalid file type: blocked before FileReader with clear error message.
+- File too large: blocked before FileReader with clear error message.
+- Unauthenticated access: DashboardLayout redirects to /auth/login.
+- Broken API response: try/catch in all service methods and hooks.
+- No live content: /live page shows "No content available" empty state.
+
+## Assumptions
+
+- No real backend exists; localStorage simulates persistence for demo purposes.
+- Files are stored as Base64 data URLs in localStorage (limited to ~10MB per file).
+- Token is a mock base64 string; real implementation would use JWT from backend.
+- Polling interval on the live page is 5 seconds (configurable in useLiveContent hook).
+- Only one active broadcast per teacher is shown on the live page (first match).
+- The "+12% trending" stat on the original dashboard was replaced with a real approval rate %.
