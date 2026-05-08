@@ -6,21 +6,25 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuth } from "../../../context/AuthContext";
 import { useRouter } from "next/navigation";
-import { Radio, Loader2, AlertCircle } from "lucide-react";
+import { Radio, Loader2, AlertCircle, Eye, EyeOff } from "lucide-react";
 
 const schema = z.object({
-  email: z.string().min(1, "Email is required").email("Enter a valid email"),
+  email:    z.string().min(1, "Email is required").email("Enter a valid email"),
   password: z.string().min(1, "Password is required"),
 });
 
 export default function LoginPage() {
-  const { login } = useAuth();
-  const router = useRouter();
+  const { login }  = useAuth();
+  const router     = useRouter();
   const [serverError, setServerError] = useState("");
+  const [showPass, setShowPass]       = useState(false);
+  const [demoLoading, setDemoLoading] = useState("");
 
   const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm({
     resolver: zodResolver(schema),
   });
+
+  const busy = isSubmitting || !!demoLoading;
 
   const onSubmit = async ({ email, password }) => {
     setServerError("");
@@ -37,41 +41,46 @@ export default function LoginPage() {
     setValue("email", email);
     setValue("password", "password");
     setServerError("");
+    setDemoLoading(role);
     try {
       const user = await login(email, "password");
       router.push(user.role === "teacher" ? "/teacher/dashboard" : "/principal/dashboard");
     } catch (err) {
       setServerError(err.message);
+    } finally {
+      setDemoLoading("");
     }
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F4F5F7", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
-      <div style={{ width: "100%", maxWidth: "380px" }}>
+    <div className="min-h-screen bg-[#F4F5F7] flex items-center justify-center px-4 py-10">
+      <div className="w-full max-w-[380px]">
 
         {/* Logo */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", marginBottom: "28px" }}>
-          <div style={{ width: "36px", height: "36px", background: "#2563EB", borderRadius: "9px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px rgba(37,99,235,0.3)" }}>
-            <Radio size={18} color="#fff" />
+        <div className="flex items-center justify-center gap-2.5 mb-7">
+          <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200">
+            <Radio size={18} className="text-white" />
           </div>
-          <span style={{ fontSize: "20px", fontWeight: 800, color: "#111827" }}>StudioX</span>
+          <span className="text-[22px] font-extrabold text-gray-900 tracking-tight">StudioX</span>
         </div>
 
         {/* Card */}
-        <div className="card" style={{ padding: "28px" }}>
-          <div style={{ marginBottom: "20px" }}>
-            <h1 style={{ fontSize: "18px", fontWeight: 700, color: "#111827" }}>Sign in to your account</h1>
-            <p style={{ fontSize: "13px", color: "#6B7280", marginTop: "4px" }}>Enter your credentials to continue</p>
+        <div className="card p-7">
+          <div className="mb-6">
+            <h1 className="text-[18px] font-bold text-gray-900">Sign in to your account</h1>
+            <p className="text-[13px] text-gray-500 mt-1">Enter your credentials to continue</p>
           </div>
 
+          {/* Server error */}
           {serverError && (
-            <div style={{ display: "flex", alignItems: "flex-start", gap: "10px", padding: "10px 12px", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "8px", marginBottom: "16px" }}>
-              <AlertCircle size={15} color="#EF4444" style={{ flexShrink: 0, marginTop: "1px" }} />
-              <span style={{ fontSize: "13px", color: "#DC2626" }}>{serverError}</span>
+            <div className="flex items-start gap-2.5 px-3 py-2.5 bg-red-50 border border-red-200 rounded-lg mb-5">
+              <AlertCircle size={15} className="text-red-500 shrink-0 mt-0.5" />
+              <span className="text-[13px] text-red-600">{serverError}</span>
             </div>
           )}
 
-          <form onSubmit={handleSubmit(onSubmit)} noValidate style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
+            {/* Email */}
             <div>
               <label className="field-label">Email address</label>
               <input
@@ -83,42 +92,68 @@ export default function LoginPage() {
               {errors.email && <p className="field-error">{errors.email.message}</p>}
             </div>
 
+            {/* Password */}
             <div>
               <label className="field-label">Password</label>
-              <input
-                type="password"
-                {...register("password")}
-                placeholder="••••••••"
-                className={`field-input ${errors.password ? "error" : ""}`}
-              />
+              <div className="relative">
+                <input
+                  type={showPass ? "text" : "password"}
+                  {...register("password")}
+                  placeholder="••••••••"
+                  className={`field-input pr-10 ${errors.password ? "error" : ""}`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPass((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  tabIndex={-1}
+                >
+                  {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
               {errors.password && <p className="field-error">{errors.password.message}</p>}
             </div>
 
             <button
               type="submit"
-              disabled={isSubmitting}
-              className="btn-primary"
-              style={{ width: "100%", padding: "9px", marginTop: "4px", opacity: isSubmitting ? 0.6 : 1, cursor: isSubmitting ? "not-allowed" : "pointer" }}
+              disabled={busy}
+              className="btn-primary w-full py-2.5 mt-1 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isSubmitting ? <Loader2 size={15} className="animate-spin" /> : "Sign in"}
             </button>
           </form>
 
-          {/* Demo */}
-          <div style={{ marginTop: "20px", paddingTop: "20px", borderTop: "1px solid #F3F4F6" }}>
-            <p style={{ fontSize: "11px", color: "#9CA3AF", textAlign: "center", marginBottom: "10px", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em" }}>Quick demo access</p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-              <button onClick={() => demoLogin("teacher")} disabled={isSubmitting} className="btn-secondary" style={{ opacity: isSubmitting ? 0.5 : 1 }}>
-                👨‍🏫 Teacher
+          {/* Demo access */}
+          <div className="mt-5 pt-5 border-t border-gray-100">
+            <p className="text-[11px] text-gray-400 text-center font-semibold uppercase tracking-widest mb-3">
+              Quick Demo Access
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => demoLogin("teacher")}
+                disabled={busy}
+                className="btn-secondary py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {demoLoading === "teacher"
+                  ? <Loader2 size={13} className="animate-spin" />
+                  : <><span>👨🏫</span> Teacher</>
+                }
               </button>
-              <button onClick={() => demoLogin("principal")} disabled={isSubmitting} className="btn-secondary" style={{ opacity: isSubmitting ? 0.5 : 1 }}>
-                🏫 Principal
+              <button
+                onClick={() => demoLogin("principal")}
+                disabled={busy}
+                className="btn-secondary py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {demoLoading === "principal"
+                  ? <Loader2 size={13} className="animate-spin" />
+                  : <><span>🏫</span> Principal</>
+                }
               </button>
             </div>
           </div>
         </div>
 
-        <p style={{ textAlign: "center", fontSize: "12px", color: "#9CA3AF", marginTop: "20px" }}>
+        <p className="text-center text-[12px] text-gray-400 mt-5">
           StudioX · Educational Broadcasting Platform
         </p>
       </div>

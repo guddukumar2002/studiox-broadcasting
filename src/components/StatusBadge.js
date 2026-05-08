@@ -1,3 +1,5 @@
+import PropTypes from "prop-types";
+
 export function ApprovalBadge({ status }) {
   const map = {
     approved: "badge-approved",
@@ -13,11 +15,20 @@ export function ApprovalBadge({ status }) {
   );
 }
 
+ApprovalBadge.propTypes = {
+  status: PropTypes.oneOf(["approved", "rejected", "pending"]).isRequired,
+};
+
 export function ScheduleBadge({ startTime, endTime }) {
-  const now = new Date();
+  const now   = new Date();
   const start = new Date(startTime);
-  const end = new Date(endTime);
+  const end   = new Date(endTime);
   if (now < start) return <span className="badge-scheduled">Scheduled</span>;
   if (now <= end)  return <span className="badge-active"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />Active</span>;
   return <span className="badge-expired">Expired</span>;
 }
+
+ScheduleBadge.propTypes = {
+  startTime: PropTypes.string.isRequired,
+  endTime:   PropTypes.string.isRequired,
+};

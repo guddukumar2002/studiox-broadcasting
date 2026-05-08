@@ -1,7 +1,9 @@
 "use client";
 
 import { useLiveContent } from "../../../hooks/useContent";
-import { Radio, Clock, BookOpen, AlertCircle, ArrowLeft, Wifi, WifiOff } from "lucide-react";
+import { EmptyState, ErrorState } from "../../../components/EmptyState";
+import Img from "../../../components/Img";
+import { Radio, Clock, BookOpen, ArrowLeft, Wifi, WifiOff } from "lucide-react";
 import Link from "next/link";
 
 export default function PublicLivePage({ params }) {
@@ -35,7 +37,6 @@ export default function PublicLivePage({ params }) {
               <span className="font-bold text-gray-900 text-sm">StudioX Live</span>
             </div>
           </div>
-
           <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold border ${
             active ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-gray-100 text-gray-500 border-gray-200"
           }`}>
@@ -47,25 +48,16 @@ export default function PublicLivePage({ params }) {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 md:px-6 py-8">
+      <main className="max-w-6xl mx-auto px-4 md:px-6 py-6 sm:py-8">
 
-        {error && (
-          <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
-            <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center mb-3">
-              <AlertCircle size={22} className="text-red-500" />
-            </div>
-            <p className="font-semibold text-gray-900">Failed to load broadcast</p>
-            <p className="text-sm text-gray-500 mt-1">{error}</p>
-          </div>
-        )}
+        {error && <ErrorState message={error} />}
 
-        {!error && active ? (
+        {!error && active && (
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 lg:gap-8 items-start">
-
             {/* Media */}
             <div className="lg:col-span-3">
               <div className="relative aspect-video rounded-2xl overflow-hidden border border-gray-200 shadow-lg bg-gray-100">
-                <img src={active.fileUrl} alt={active.title} className="w-full h-full object-cover" />
+                <Img src={active.fileUrl} alt={active.title} className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
                 <div className="absolute top-3 left-3">
                   <span className="flex items-center gap-1.5 px-2.5 py-1 bg-red-600 text-white text-xs font-bold rounded-full">
@@ -82,7 +74,6 @@ export default function PublicLivePage({ params }) {
                 <h1 className="text-xl md:text-2xl font-bold text-gray-900 mt-2 leading-snug">{active.title}</h1>
                 <p className="text-sm text-gray-500 mt-2 leading-relaxed">{active.description}</p>
               </div>
-
               <div className="card p-4 space-y-3">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Broadcast Details</p>
                 <div className="flex items-center gap-3">
@@ -106,27 +97,20 @@ export default function PublicLivePage({ params }) {
                   </div>
                 </div>
               </div>
-
               <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-700 flex items-center gap-2">
                 <Wifi size={13} className="flex-shrink-0" />
                 This page auto-refreshes every 5 seconds
               </div>
             </div>
           </div>
-        ) : !error ? (
-          <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
-            <div className="w-16 h-16 bg-white rounded-2xl border border-gray-200 flex items-center justify-center mb-4 shadow-sm">
-              <Radio size={28} className="text-gray-300" />
-            </div>
-            <h2 className="text-lg font-bold text-gray-900">No content available</h2>
-            <p className="text-sm text-gray-500 mt-1 max-w-sm">
-              No live content is scheduled right now. Please check back later.
-            </p>
-            <Link href="/auth/login" className="mt-6 btn-secondary text-sm">
-              Sign in to manage Studio
-            </Link>
+        )}
+
+        {!error && !active && (
+          <div className="flex flex-col items-center justify-center min-h-[50vh]">
+            <EmptyState icon={Radio} title="No content available" message="No live content is scheduled right now. Please check back later." />
+            <Link href="/auth/login" className="mt-2 btn-secondary text-sm">Sign in to manage Studio</Link>
           </div>
-        ) : null}
+        )}
       </main>
     </div>
   );

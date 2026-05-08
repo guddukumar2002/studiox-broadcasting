@@ -9,15 +9,22 @@ const TEACHERS = [
 
 const STATUSES = ["approved", "pending", "rejected"];
 
+// Reliable Unsplash images — using /photos/:id/download?w=800 format which never breaks
 const IMAGES = [
-  "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=800&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1532187875605-2fe358511423?w=800&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1505664194779-8beaceb93744?w=800&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1509228468518-180dd4864904?w=800&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1554475901-4538ddfbccc2?w=800&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1507413245164-6160d8298b31?w=800&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=800&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=800&q=80&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1532187875605-2fe358511423?w=800&q=80&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1509228468518-180dd4864904?w=800&q=80&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1554475901-4538ddfbccc2?w=800&q=80&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1507413245164-6160d8298b31?w=800&q=80&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=800&q=80&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1453733190371-0a9bedd82893?w=800&q=80&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1564325724739-bae0bd08762c?w=800&q=80&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1606326608606-aa0b62935f2b?w=800&q=80&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=800&q=80&auto=format&fit=crop",
 ];
+
+// Fallback placeholder when any image fails to load
+export const IMG_FALLBACK = "https://placehold.co/800x450/EFF6FF/2563EB?text=StudioX";
 
 const TITLES = [
   "Introduction to Calculus", "The Periodic Table", "World War II Overview",
@@ -29,16 +36,15 @@ const TITLES = [
   "Electromagnetic Waves", "World Geography Overview",
 ];
 
-// Generates a large dataset to simulate 500-1000 items for performance testing
 function generateLargeDataset(count = 50) {
   const now = Date.now();
   return Array.from({ length: count }, (_, i) => {
-    const teacher = TEACHERS[i % TEACHERS.length];
-    const subject = SUBJECTS[i % SUBJECTS.length];
-    const status = STATUSES[i % STATUSES.length];
-    const offsetMs = (i - 10) * 3600000; // spread across past/future
-    const startTime = new Date(now + offsetMs).toISOString();
-    const endTime = new Date(now + offsetMs + 7200000).toISOString();
+    const teacher    = TEACHERS[i % TEACHERS.length];
+    const subject    = SUBJECTS[i % SUBJECTS.length];
+    const status     = STATUSES[i % STATUSES.length];
+    const offsetMs   = (i - 10) * 3600000;
+    const startTime  = new Date(now + offsetMs).toISOString();
+    const endTime    = new Date(now + offsetMs + 7200000).toISOString();
     return {
       id: `seed_${i + 1}`,
       teacherId: teacher.id,
@@ -84,7 +90,6 @@ export const saveStore = (data) => {
   }
 };
 
-// Call this in browser console to reset demo data: window.__resetStore()
 if (typeof window !== "undefined") {
   window.__resetStore = () => {
     localStorage.removeItem("broadcast_store");

@@ -1,3 +1,4 @@
+import PropTypes from "prop-types";
 import { AlertCircle, Inbox } from "lucide-react";
 
 export function EmptyState({ title = "No data found", message = "Nothing here yet.", icon: Icon = Inbox }) {
@@ -11,6 +12,12 @@ export function EmptyState({ title = "No data found", message = "Nothing here ye
     </div>
   );
 }
+
+EmptyState.propTypes = {
+  title:   PropTypes.string,
+  message: PropTypes.string,
+  icon:    PropTypes.elementType,
+};
 
 export function ErrorState({ message = "Something went wrong.", onRetry }) {
   return (
@@ -28,3 +35,8 @@ export function ErrorState({ message = "Something went wrong.", onRetry }) {
     </div>
   );
 }
+
+ErrorState.propTypes = {
+  message: PropTypes.string,
+  onRetry: PropTypes.func,
+};

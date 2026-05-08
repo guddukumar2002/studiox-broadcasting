@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
 import DashboardLayout from "../../../layouts/DashboardLayout";
+import Img from "../../../components/Img";
 import { SUBJECTS } from "../../../utils/mockData";
 import { useCreateContent } from "../../../hooks/useContent";
 import { toast } from "sonner";
@@ -21,28 +22,15 @@ const schema = z.object({
   startTime:        z.string().min(1, "Start time is required"),
   endTime:          z.string().min(1, "End time is required"),
   rotationDuration: z.coerce.number().min(10, "Minimum 10 seconds"),
-}).refine(d => new Date(d.endTime) > new Date(d.startTime), {
+}).refine((d) => new Date(d.endTime) > new Date(d.startTime), {
   message: "End time must be after start time",
   path: ["endTime"],
 });
 
-const inputStyle = (hasError) => ({
-  width: "100%", padding: "8px 12px", border: `1px solid ${hasError ? "#EF4444" : "#E5E7EB"}`,
-  borderRadius: "7px", fontSize: "13px", color: "#111827", outline: "none",
-  background: "#fff", boxSizing: "border-box", fontFamily: "inherit",
-  boxShadow: hasError ? "0 0 0 3px rgba(239,68,68,0.1)" : "none",
-});
-
-const labelStyle = {
-  display: "block", fontSize: "13px", fontWeight: 500, color: "#374151", marginBottom: "6px",
-};
-
-const errorStyle = { fontSize: "12px", color: "#EF4444", marginTop: "4px" };
-
 export default function UploadContentPage() {
   const router = useRouter();
   const { create, loading: uploading } = useCreateContent();
-  const [preview, setPreview] = useState(null);
+  const [preview, setPreview]   = useState(null);
   const [fileData, setFileData] = useState("");
   const [fileError, setFileError] = useState("");
   const [done, setDone] = useState(false);
@@ -77,119 +65,150 @@ export default function UploadContentPage() {
 
   if (done) return (
     <DashboardLayout>
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh", textAlign: "center" }}>
-        <div style={{ width: "56px", height: "56px", background: "#ECFDF5", borderRadius: "14px", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "16px", border: "1px solid #D1FAE5" }}>
-          <CheckCircle2 size={28} color="#059669" />
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+        <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center mb-4 border border-emerald-200">
+          <CheckCircle2 size={28} className="text-emerald-600" />
         </div>
-        <h2 style={{ fontSize: "16px", fontWeight: 700, color: "#111827" }}>Submitted successfully!</h2>
-        <p style={{ fontSize: "13px", color: "#6B7280", marginTop: "6px" }}>Redirecting to your content...</p>
+        <h2 className="text-[16px] font-bold text-gray-900">Submitted successfully!</h2>
+        <p className="text-[13px] text-gray-500 mt-1.5">Redirecting to your content...</p>
       </div>
     </DashboardLayout>
   );
 
   return (
     <DashboardLayout>
-      <div style={{ maxWidth: "900px" }}>
+      <div className="max-w-[900px]">
 
         {/* Header */}
-        <div style={{ marginBottom: "20px" }}>
-          <h1 style={{ fontSize: "18px", fontWeight: 700, color: "#111827" }}>Upload Content</h1>
-          <p style={{ fontSize: "13px", color: "#6B7280", marginTop: "2px" }}>Create a new broadcast for your students</p>
+        <div className="mb-6">
+          <h1 className="text-lg sm:text-xl font-bold text-gray-900">Upload Content</h1>
+          <p className="text-[13px] text-gray-500 mt-0.5">Create a new broadcast for your students</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} noValidate>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "16px" }} id="upload-grid">
-            <style>{`
-              @media (min-width: 768px) {
-                #upload-grid { grid-template-columns: 3fr 2fr !important; }
-              }
-            `}</style>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
 
-            {/* Left column */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            {/* Left column — 3 cols */}
+            <div className="md:col-span-3 flex flex-col gap-4">
 
               {/* File upload */}
-              <div style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: "10px", padding: "20px" }}>
-                <label style={labelStyle}>Preview Image <span style={{ color: "#EF4444" }}>*</span></label>
+              <div className="card p-5">
+                <label className="field-label">
+                  Preview Image <span className="text-red-500">*</span>
+                </label>
                 {preview ? (
-                  <div style={{ position: "relative", aspectRatio: "16/9", borderRadius: "8px", overflow: "hidden", border: "1px solid #E5E7EB" }}>
-                    <img src={preview} alt="Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  <div className="relative aspect-video rounded-lg overflow-hidden border border-gray-200">
+                    <Img src={preview} alt="Preview" className="w-full h-full object-cover" />
                     <button
                       type="button"
                       onClick={() => { setPreview(null); setFileData(""); }}
-                      style={{ position: "absolute", top: "10px", right: "10px", padding: "5px", background: "#fff", border: "1px solid #E5E7EB", borderRadius: "6px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.1)" }}
+                      className="absolute top-2.5 right-2.5 p-1.5 bg-white rounded-lg border border-gray-200 shadow-sm hover:bg-gray-50 transition-colors"
                     >
-                      <X size={13} color="#6B7280" />
+                      <X size={13} className="text-gray-600" />
                     </button>
                   </div>
                 ) : (
-                  <label style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", aspectRatio: "16/9", borderRadius: "8px", border: "2px dashed #E5E7EB", cursor: "pointer", background: "#FAFAFA", transition: "border-color 0.15s" }}>
-                    <div style={{ width: "44px", height: "44px", background: "#F3F4F6", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "10px" }}>
-                      <Upload size={20} color="#9CA3AF" />
+                  <label className="flex flex-col items-center justify-center aspect-video rounded-lg border-2 border-dashed border-gray-200 cursor-pointer bg-gray-50 hover:border-gray-300 transition-colors">
+                    <div className="w-11 h-11 bg-gray-100 rounded-xl flex items-center justify-center mb-3">
+                      <Upload size={20} className="text-gray-400" />
                     </div>
-                    <p style={{ fontSize: "13px", fontWeight: 500, color: "#374151" }}>Click to upload</p>
-                    <p style={{ fontSize: "11px", color: "#9CA3AF", marginTop: "4px" }}>JPG, PNG, GIF · Max 10MB</p>
-                    <input type="file" style={{ display: "none" }} accept=".jpg,.jpeg,.png,.gif" onChange={onFile} />
+                    <p className="text-[13px] font-medium text-gray-700">Click to upload</p>
+                    <p className="text-[11px] text-gray-400 mt-1">JPG, PNG, GIF · Max 10MB</p>
+                    <input type="file" className="hidden" accept=".jpg,.jpeg,.png,.gif" onChange={onFile} />
                   </label>
                 )}
                 {fileError && (
-                  <p style={{ ...errorStyle, display: "flex", alignItems: "center", gap: "5px", marginTop: "8px" }}>
+                  <p className="flex items-center gap-1.5 text-[12px] text-red-500 mt-2">
                     <AlertCircle size={12} /> {fileError}
                   </p>
                 )}
               </div>
 
               {/* Title + Subject */}
-              <div style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: "10px", padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div className="card p-5 flex flex-col gap-4">
                 <div>
-                  <label style={labelStyle}>Title <span style={{ color: "#EF4444" }}>*</span></label>
-                  <input {...register("title")} placeholder="e.g. Introduction to Calculus" style={inputStyle(errors.title)} />
-                  {errors.title && <p style={errorStyle}>{errors.title.message}</p>}
+                  <label className="field-label">
+                    Title <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    {...register("title")}
+                    placeholder="e.g. Introduction to Calculus"
+                    className={`field-input ${errors.title ? "error" : ""}`}
+                  />
+                  {errors.title && <p className="field-error">{errors.title.message}</p>}
                 </div>
                 <div>
-                  <label style={labelStyle}>Subject <span style={{ color: "#EF4444" }}>*</span></label>
-                  <select {...register("subject")} style={{ ...inputStyle(errors.subject), cursor: "pointer" }}>
+                  <label className="field-label">
+                    Subject <span className="text-red-500">*</span>
+                  </label>
+                  <select {...register("subject")} className={`field-input cursor-pointer ${errors.subject ? "error" : ""}`}>
                     <option value="">Select subject</option>
-                    {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
+                    {SUBJECTS.map((s) => <option key={s} value={s}>{s}</option>)}
                   </select>
-                  {errors.subject && <p style={errorStyle}>{errors.subject.message}</p>}
+                  {errors.subject && <p className="field-error">{errors.subject.message}</p>}
                 </div>
               </div>
             </div>
 
-            {/* Right column */}
-            <div style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: "10px", padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            {/* Right column — 2 cols */}
+            <div className="md:col-span-2 card p-5 flex flex-col gap-4">
               <div>
-                <label style={labelStyle}>Description <span style={{ color: "#EF4444" }}>*</span></label>
-                <textarea rows={4} {...register("description")} placeholder="Brief summary of the lesson..." style={{ ...inputStyle(errors.description), resize: "none" }} />
-                {errors.description && <p style={errorStyle}>{errors.description.message}</p>}
+                <label className="field-label">
+                  Description <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  rows={4}
+                  {...register("description")}
+                  placeholder="Brief summary of the lesson..."
+                  className={`field-input resize-none ${errors.description ? "error" : ""}`}
+                />
+                {errors.description && <p className="field-error">{errors.description.message}</p>}
               </div>
               <div>
-                <label style={labelStyle}>Start Time <span style={{ color: "#EF4444" }}>*</span></label>
-                <input type="datetime-local" {...register("startTime")} style={inputStyle(errors.startTime)} />
-                {errors.startTime && <p style={errorStyle}>{errors.startTime.message}</p>}
+                <label className="field-label">
+                  Start Time <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="datetime-local"
+                  {...register("startTime")}
+                  className={`field-input ${errors.startTime ? "error" : ""}`}
+                />
+                {errors.startTime && <p className="field-error">{errors.startTime.message}</p>}
               </div>
               <div>
-                <label style={labelStyle}>End Time <span style={{ color: "#EF4444" }}>*</span></label>
-                <input type="datetime-local" {...register("endTime")} style={inputStyle(errors.endTime)} />
-                {errors.endTime && <p style={errorStyle}>{errors.endTime.message}</p>}
+                <label className="field-label">
+                  End Time <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="datetime-local"
+                  {...register("endTime")}
+                  className={`field-input ${errors.endTime ? "error" : ""}`}
+                />
+                {errors.endTime && <p className="field-error">{errors.endTime.message}</p>}
               </div>
               <div>
-                <label style={labelStyle}>Rotation Duration (seconds)</label>
-                <input type="number" min="10" {...register("rotationDuration")} style={inputStyle(errors.rotationDuration)} />
-                {errors.rotationDuration && <p style={errorStyle}>{errors.rotationDuration.message}</p>}
+                <label className="field-label">Rotation Duration (seconds)</label>
+                <input
+                  type="number"
+                  min="10"
+                  {...register("rotationDuration")}
+                  className={`field-input ${errors.rotationDuration ? "error" : ""}`}
+                />
+                {errors.rotationDuration && <p className="field-error">{errors.rotationDuration.message}</p>}
               </div>
               <button
                 type="submit"
                 disabled={isSubmitting || uploading}
-                style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "10px", background: (isSubmitting || uploading) ? "#93C5FD" : "#2563EB", color: "#fff", fontSize: "13px", fontWeight: 600, borderRadius: "7px", border: "none", cursor: (isSubmitting || uploading) ? "not-allowed" : "pointer", marginTop: "auto" }}
+                className="btn-primary w-full py-2.5 mt-auto disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {(isSubmitting || uploading) ? <><Loader2 size={14} style={{ animation: "spin 0.8s linear infinite" }} /> Submitting...</> : "Submit for Approval"}
+                {isSubmitting || uploading
+                  ? <><Loader2 size={14} className="animate-spin" /> Submitting...</>
+                  : "Submit for Approval"
+                }
               </button>
             </div>
           </div>
         </form>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     </DashboardLayout>
   );

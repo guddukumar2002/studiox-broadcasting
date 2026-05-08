@@ -7,20 +7,14 @@ import { authService } from "../services/auth.service";
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // Read localStorage synchronously on first render — eliminates the
+  // loading flash on the root page entirely (no useEffect delay needed).
+  const [user, setUser] = useState(() => {
+    if (typeof window === "undefined") return null;
+    try { return authService.getSavedUser(); } catch { return null; }
+  });
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
-
-  useEffect(() => {
-    try {
-      const savedUser = authService.getSavedUser();
-      if (savedUser) setUser(savedUser);
-    } catch (e) {
-      // ignore corrupted storage
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
   const login = async (email, password) => {
     const { user: loggedInUser, token } = await authService.login(email, password);

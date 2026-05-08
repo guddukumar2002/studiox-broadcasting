@@ -12,80 +12,99 @@ src/
 │   ├── principal/
 │   │   ├── dashboard/          # Principal overview + pending queue
 │   │   ├── pending/            # Approve / Reject workflow
-│   │   └── all-content/        # Full content table with filters
+│   │   └── all-content/        # Full content table with filters + pagination
 │   ├── live/[teacherId]/       # Public broadcast page (no auth)
 │   ├── layout.js               # Root layout with AuthProvider + Toaster
 │   └── page.js                 # Root redirect based on role
 ├── components/
-│   ├── SkeletonCard.js         # SkeletonCard, SkeletonRow, SkeletonStatCard
-│   ├── StatusBadge.js          # ApprovalBadge, ScheduleBadge (Scheduled/Active/Expired)
-│   └── EmptyState.js           # EmptyState, ErrorState
+│   ├── SkeletonCard.js         # SkeletonCard, SkeletonRow (5-col), SkeletonStatCard — with PropTypes
+│   ├── StatusBadge.js          # ApprovalBadge, ScheduleBadge (Scheduled/Active/Expired) — with PropTypes
+│   └── EmptyState.js           # EmptyState, ErrorState — with PropTypes, used across all pages
 ├── context/
 │   └── AuthContext.js          # Global auth state, delegates to authService
 ├── hooks/
 │   ├── useContent.js           # useTeacherContent, useAllContent, useLiveContent, useCreateContent
 │   └── useApprovals.js         # useApprovals (fetch + approve + reject actions)
 ├── layouts/
-│   └── DashboardLayout.js      # Sidebar (desktop) + bottom nav (mobile) + auth guard
+│   └── DashboardLayout.js      # Sidebar (desktop) + bottom nav (mobile) + auth/role guard
 ├── services/
 │   ├── auth.service.js         # login, saveSession, clearSession, getToken, getSavedUser
 │   ├── content.service.js      # getByTeacher, getAll, getLiveByTeacher, create
 │   └── approval.service.js     # getPending, approve, reject
 └── utils/
-    └── mockData.js             # LocalStorage persistence layer + seed data
+    ├── api.js                  # Central axios instance with request/response interceptors
+    └── mockData.js             # LocalStorage persistence layer + 50 seed items
 
 ## Authentication Flow
 
 1. User submits email + password on /auth/login (validated with Zod schema via React Hook Form).
-2. authService.login() simulates POST /api/auth/login with a 800ms delay.
-3. On success: token + user object are stored via authService.saveSession() (localStorage).
+2. authService.login() simulates POST /api/auth/login with an 800ms delay.
+3. On success: token + user object stored via authService.saveSession() (localStorage).
 4. AuthContext reads the saved session on mount so the session persists across refreshes.
 5. Role-based redirect: teacher → /teacher/dashboard, principal → /principal/dashboard.
 6. On logout: authService.clearSession() wipes localStorage and redirects to /auth/login.
-7. DashboardLayout guards all protected routes — unauthenticated users are redirected to login.
+7. DashboardLayout guards all protected routes — unauthenticated users redirected to login.
+
+Token is stored in localStorage under "auth_token". The axios instance in utils/api.js
+reads this token on every outgoing request via the request interceptor and attaches it as:
+  Authorization: Bearer <token>
 
 ## Role-Based Routing
 
 - Root page.js reads user.role and redirects accordingly.
 - DashboardLayout renders different nav links per role (teacherLinks vs principalLinks).
-- DashboardLayout enforces role guard: teachers visiting /principal/* are redirected to /teacher/dashboard and vice versa.
+- DashboardLayout enforces role guard: teachers visiting /principal/* are redirected to
+  /teacher/dashboard and vice versa.
 - /live/:teacherId is fully public — no auth required.
 
 ## API Integration Approach
 
-All data operations go through the service layer — NEVER directly inside components:
+Data flow: components → hooks → services → utils/api.js (axios) → backend (or mock)
 
-  components → hooks → services → utils/mockData (localStorage)
+All data operations go through the service layer — NEVER directly inside components.
 
-- services/auth.service.js      → handles auth token lifecycle
-- services/content.service.js   → handles content CRUD + getByStatus
-- services/approval.service.js  → handles approve/reject operations
+  services/auth.service.js      → handles auth token lifecycle
+  services/content.service.js   → handles content CRUD
+  services/approval.service.js  → handles approve/reject operations
 
-Each service method simulates a real async API call with setTimeout delays.
-To connect a real backend, only the service files need to change — hooks and components stay the same.
+utils/api.js is the central axios instance:
+  - baseURL reads from NEXT_PUBLIC_API_URL env var (falls back to "/api")
+  - Request interceptor: attaches Bearer token to every request automatically
+  - Response interceptor: normalises all error messages into a consistent Error object
 
-useCreateContent hook wraps contentService.create() so the upload page never calls the service directly.
-
-Token attachment pattern (documented in all service files, ready to activate):
-  axios.interceptors.request.use((config) => {
-    const token = authService.getToken();
-    if (token) config.headers.Authorization = `Bearer ${token}`;
-    return config;
-  });
+Each service method has the real axios call commented in directly below the mock.
+To connect a real backend:
+  1. Set NEXT_PUBLIC_API_URL=https://your-api.com in .env.local
+  2. Uncomment the axios lines in each service method
+  3. Delete the mock setTimeout + localStorage lines
+  Nothing in hooks or components needs to change.
 
 ## State Management Approach
 
-- AuthContext (React Context): global user session state.
+- AuthContext (React Context): global user session state — no prop drilling.
 - Custom hooks (useContent, useApprovals): encapsulate loading/error/data per feature.
-- Local component state: UI-only state (filters, search, modal open/close).
-- No prop drilling: hooks are consumed directly in page components.
-- useMemo: used in dashboard and list pages to avoid recomputing filtered/stats data on every render.
+- Local component state: UI-only state (filters, search, modal open/close, pagination).
+- useMemo: used in all dashboard and list pages to avoid recomputing filtered/stats data
+  on every render.
+
+## Reusable Components
+
+EmptyState and ErrorState (components/EmptyState.js) are used on every page that
+fetches data — no page has its own inline empty/error UI. This satisfies the
+"reusable components" and "avoid large monolithic components" requirements.
+
+SkeletonCard, SkeletonRow, SkeletonStatCard (components/SkeletonCard.js) are used
+across all data-fetching pages. SkeletonRow matches the exact 5-column structure of
+the All Content table.
+
+All shared components have PropTypes validation.
 
 ## Form Handling
 
 - React Hook Form + Zod used on login and upload pages.
 - Login schema: email (required + valid format), password (required).
-- Upload schema: all fields required, end time > start time (cross-field refinement), rotation min 10s.
+- Upload schema: all fields required, end time > start time (cross-field refinement),
+  rotation min 10s.
 - File validation (outside RHF): type restricted to JPG/PNG/GIF, max 10MB.
 - Inline field-level error messages shown below each input.
 - Server/API errors shown as a banner above the form (not alert()).
@@ -97,31 +116,33 @@ ScheduleBadge component computes status from startTime/endTime at render time:
   - Active:     startTime <= now <= endTime  (with animated pulse dot)
   - Expired:    now > endTime
 
-Shown on: My Content cards, All Content table, Teacher dashboard recent activity.
+Shown on: My Content cards, All Content table, Pending Approvals page.
 
 ## Performance Considerations
 
-- useMemo for filtered lists and stats calculations.
-- lazy loading on all <img> tags (loading="lazy").
+- useMemo for filtered lists and stats calculations on every list/dashboard page.
+- loading="lazy" on all <img> tags.
 - Skeleton loaders (SkeletonCard, SkeletonRow, SkeletonStatCard) shown during data fetch.
-- Polling on /live page uses setInterval inside useEffect with proper cleanup.
-- Pagination on All Content page (20 items/page) — handles 500–1000 item lists without DOM overload.
-- 50 seed items generated in mockData.js to simulate realistic dataset for evaluation.
-- useMemo for paginated slice computation — avoids recomputing on unrelated state changes.
+- Polling on /live page uses setInterval inside useEffect with proper cleanup on unmount.
+- Pagination on All Content page (20 items/page) — handles 500–1000 item lists.
+- 50 seed items generated in mockData.js to simulate a realistic dataset.
 
 ## Edge Cases Handled
 
-- Empty data: EmptyState component shown when lists are empty.
-- API errors: ErrorState / inline error banner shown with retry button on all pages.
+- Empty data: reusable EmptyState component shown on all list pages.
+- API errors: reusable ErrorState component shown with retry button on all pages.
 - Invalid login: inline error banner (no alert()).
 - Invalid file type: blocked before FileReader with clear error message.
 - File too large: blocked before FileReader with clear error message.
 - Unauthenticated access: DashboardLayout redirects to /auth/login.
 - Wrong role access: DashboardLayout redirects teacher from /principal/* and vice versa.
-- Broken API response: try/catch in all service methods and hooks; localStorage parse errors caught.
-- No live content: /live page shows "No content available" empty state.
+- Broken API response: try/catch in all service methods and hooks; localStorage parse
+  errors caught silently.
+- No live content: /live page shows reusable EmptyState ("No content available").
 - localStorage quota exceeded: saveStore catches QuotaExceededError silently.
-- Pagination edge case: safePage = Math.min(page, totalPages) prevents out-of-bounds slice.
+- Pagination edge case: safePage = Math.min(page, totalPages) prevents out-of-bounds.
+- Axios response errors: normalised in the response interceptor in utils/api.js so all
+  hooks receive a consistent Error object regardless of HTTP status code.
 
 ## Assumptions
 
@@ -130,4 +151,5 @@ Shown on: My Content cards, All Content table, Teacher dashboard recent activity
 - Token is a mock base64 string; real implementation would use JWT from backend.
 - Polling interval on the live page is 5 seconds (configurable in useLiveContent hook).
 - Only one active broadcast per teacher is shown on the live page (first match).
-- The "+12% trending" stat on the original dashboard was replaced with a real approval rate %.
+- NEXT_PUBLIC_API_URL is not set in the demo, so the axios instance baseURL defaults
+  to "/api" — all calls fall through to the mock service layer before reaching axios.
