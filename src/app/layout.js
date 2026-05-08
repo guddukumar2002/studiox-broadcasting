@@ -6,12 +6,23 @@ import { Toaster } from "sonner";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
+  metadataBase: new URL("https://studiox-broadcasting.vercel.app"),
   title: "StudioX | Content Broadcasting System",
   description: "Educational content broadcasting and management system for teachers and principals.",
+  icons: {
+    icon: { url: "/favicon.png", type: "image/png" },
+    apple: "/favicon.png",
+  },
+  openGraph: {
+    title:       "StudioX | Content Broadcasting System",
+    description: "Educational content broadcasting for teachers and principals.",
+    type:        "website",
+    url:         "https://studiox-broadcasting.vercel.app",
+  },
 };
 
 export const viewport = {
-  width: "device-width",
+  width:      "device-width",
   initialScale: 1,
   themeColor: "#2563EB",
 };

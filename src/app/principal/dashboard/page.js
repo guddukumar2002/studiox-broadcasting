@@ -80,12 +80,12 @@ export default function PrincipalDashboard() {
             </div>
             <Link href="/principal/pending" className="text-[12px] text-blue-600 font-medium hover:underline">View all →</Link>
           </div>
-          <div className="p-2">
+          <div className="divide-y divide-gray-50">
             {loading ? (
               [1, 2, 3, 4].map((i) => (
-                <div key={i} className="flex items-center gap-3 p-2 rounded-lg animate-pulse">
-                  <div className="w-16 h-11 rounded-lg bg-gray-100 shrink-0" />
-                  <div className="flex-1 space-y-1.5">
+                <div key={i} className="flex items-center gap-3 px-3 py-3 animate-pulse">
+                  <div className="w-20 h-14 rounded-lg bg-gray-100 shrink-0" />
+                  <div className="flex-1 space-y-2">
                     <div className="h-3 bg-gray-100 rounded w-3/5" />
                     <div className="h-2.5 bg-gray-100 rounded w-2/5" />
                   </div>
@@ -95,20 +95,21 @@ export default function PrincipalDashboard() {
               <EmptyState icon={CheckCircle} title="All caught up!" message="No pending content to review." />
             ) : (
               pendingItems.map((item) => (
-                <button
+                <Link
                   key={item.id}
-                  onClick={() => router.push("/principal/pending")}
-                  className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 transition-colors text-left group"
+                  href={`/principal/pending?highlight=${item.id}`}
+                  className="flex items-center gap-3 px-3 py-3 hover:bg-gray-50 transition-colors group"
                 >
-                  <div className="w-16 h-11 rounded-lg bg-gray-100 overflow-hidden shrink-0 border border-gray-200">
+                  <div className="w-20 h-14 rounded-lg bg-gray-100 overflow-hidden shrink-0 border border-gray-200">
                     <Img src={item.fileUrl} alt="" className="w-full h-full object-cover" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[13px] font-semibold text-gray-900 truncate">{item.title}</p>
-                    <p className="text-[11px] text-gray-400 mt-0.5">{item.subject} · {item.teacherName}</p>
+                    <p className="text-[12px] text-gray-500 mt-0.5">{item.subject}</p>
+                    <p className="text-[11px] text-gray-400 mt-0.5">{item.teacherName}</p>
                   </div>
-                  <ArrowRight size={14} className="text-gray-300 group-hover:text-gray-500 transition-colors shrink-0" />
-                </button>
+                  <ArrowRight size={14} className="text-gray-300 group-hover:text-blue-500 transition-colors shrink-0" />
+                </Link>
               ))
             )}
           </div>

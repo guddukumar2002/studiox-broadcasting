@@ -122,13 +122,8 @@ export default function DashboardLayout({ children }) {
   const links       = user?.role === "teacher" ? teacherLinks : principalLinks;
   const currentPage = links.find((l) => l.href === pathname);
 
-  if (loading) return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="w-7 h-7 border-2 border-blue-100 border-t-blue-600 rounded-full animate-spin" />
-    </div>
-  );
-
-  if (!user) return null;
+  // While auth resolves (~1 frame), render nothing — avoids any flash
+  if (loading || !user) return null;
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">

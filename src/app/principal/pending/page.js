@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import DashboardLayout from "../../../layouts/DashboardLayout";
 import { useApprovals } from "../../../hooks/useApprovals";
 import { ApprovalBadge, ScheduleBadge } from "../../../components/StatusBadge";
@@ -9,6 +10,7 @@ import Img from "../../../components/Img";
 import { Check, X, User, Clock, Calendar, MessageSquare, AlertCircle, Loader2, CheckCircle, Eye } from "lucide-react";
 import { toast } from "sonner";
 
+// ── Preview Modal ─────────────────────────────────────────────────────────────
 function PreviewModal({ item, onClose }) {
   if (!item) return null;
   return (
@@ -32,6 +34,7 @@ function PreviewModal({ item, onClose }) {
   );
 }
 
+// ── Reject Modal ──────────────────────────────────────────────────────────────
 function RejectModal({ item, onClose, onConfirm, loading }) {
   const [reason, setReason] = useState("");
   const handleSubmit = () => {
@@ -91,8 +94,7 @@ function RejectModal({ item, onClose, onConfirm, loading }) {
           <button
             onClick={handleSubmit}
             disabled={loading || !reason.trim()}
-            className="btn-danger flex-1"
-            style={{ opacity: loading || !reason.trim() ? 0.6 : 1, cursor: loading || !reason.trim() ? "not-allowed" : "pointer" }}
+            className="btn-danger flex-1 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {loading ? <Loader2 size={14} className="animate-spin" /> : <><X size={14} /> Send Feedback</>}
           </button>
@@ -102,9 +104,15 @@ function RejectModal({ item, onClose, onConfirm, loading }) {
   );
 }
 
-function ContentCard({ item, onApprove, onReject, onPreview, actionLoading }) {
+// ── Content Card ──────────────────────────────────────────────────────────────
+function ContentCard({ item, onApprove, onReject, onPreview, actionLoading, highlighted, cardRef }) {
   return (
-    <div className="card overflow-hidden flex flex-col group hover:shadow-md transition-shadow duration-200">
+    <div
+      ref={cardRef}
+      className={`card overflow-hidden flex flex-col group hover:shadow-md transition-all duration-200 ${
+        highlighted ? "ring-2 ring-blue-500 shadow-md" : ""
+      }`}
+    >
       {/* Image */}
       <div className="relative aspect-video bg-gray-100 overflow-hidden cursor-pointer" onClick={() => onPreview(item)}>
         <Img src={item.fileUrl} alt={item.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" />
@@ -113,12 +121,8 @@ function ContentCard({ item, onApprove, onReject, onPreview, actionLoading }) {
             <Eye size={13} /> Preview
           </div>
         </div>
-        <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
-          <ApprovalBadge status="pending" />
-        </div>
-        <div className="absolute top-2.5 right-2.5">
-          <ScheduleBadge startTime={item.startTime} endTime={item.endTime} />
-        </div>
+        <div className="absolute top-2.5 left-2.5"><ApprovalBadge status="pending" /></div>
+        <div className="absolute top-2.5 right-2.5"><ScheduleBadge startTime={item.startTime} endTime={item.endTime} /></div>
       </div>
 
       {/* Body */}
@@ -128,7 +132,7 @@ function ContentCard({ item, onApprove, onReject, onPreview, actionLoading }) {
           <h3 className="text-[14px] font-bold text-gray-900 leading-snug line-clamp-2">{item.title}</h3>
         </div>
         <p className="text-[12px] text-gray-500 leading-relaxed line-clamp-2 flex-1">{item.description}</p>
-        <div className="flex flex-col gap-1.5 pt-1 border-t border-gray-100">
+        <div className="flex flex-col gap-1.5 pt-2 border-t border-gray-100">
           <div className="flex items-center gap-2 text-[11px] text-gray-400">
             <User size={11} className="shrink-0" />
             <span className="font-medium text-gray-600">{item.teacherName}</span>
@@ -167,6 +171,7 @@ function ContentCard({ item, onApprove, onReject, onPreview, actionLoading }) {
   );
 }
 
+// ── Skeleton ──────────────────────────────────────────────────────────────────
 function SkeletonContentCard() {
   return (
     <div className="card overflow-hidden animate-pulse">
@@ -189,10 +194,31 @@ function SkeletonContentCard() {
   );
 }
 
+// Wrap in Suspense — required by Next.js 14 for useSearchParams
 export default function PendingApprovals() {
+  return (
+    <Suspense fallback={null}>
+      <PendingApprovalsInner />
+    </Suspense>
+  );
+}
+
+function PendingApprovalsInner() {
+  const searchParams                      = useSearchParams();
+  const highlightId                       = searchParams.get("highlight");
   const { data: items, loading, error, actionLoading, approve, reject, refetch } = useApprovals();
   const [rejectTarget, setRejectTarget]   = useState(null);
   const [previewTarget, setPreviewTarget] = useState(null);
+  const highlightRef                      = useRef(null);
+
+  // Scroll to highlighted card after data loads
+  useEffect(() => {
+    if (highlightId && !loading && highlightRef.current) {
+      setTimeout(() => {
+        highlightRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 100);
+    }
+  }, [highlightId, loading]);
 
   const handleApprove = async (id) => {
     try { await approve(id); toast.success("Content approved!"); }
@@ -210,6 +236,7 @@ export default function PendingApprovals() {
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-6">
+
         {/* Header */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
@@ -218,7 +245,9 @@ export default function PendingApprovals() {
               {loading ? "Loading..." : `${items.length} item${items.length !== 1 ? "s" : ""} awaiting review`}
             </p>
           </div>
-          {items.length > 0 && <span className="badge-pending text-[13px] px-3 py-1">{items.length} pending</span>}
+          {items.length > 0 && (
+            <span className="badge-pending text-[13px] px-3 py-1">{items.length} pending</span>
+          )}
         </div>
 
         {error && <ErrorState message={error} onRetry={refetch} />}
@@ -235,22 +264,32 @@ export default function PendingApprovals() {
 
         {!error && !loading && items.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {items.map((item) => (
-              <ContentCard
-                key={item.id}
-                item={item}
-                onApprove={handleApprove}
-                onReject={setRejectTarget}
-                onPreview={setPreviewTarget}
-                actionLoading={actionLoading}
-              />
-            ))}
+            {items.map((item) => {
+              const isHighlighted = item.id === highlightId;
+              return (
+                <ContentCard
+                  key={item.id}
+                  item={item}
+                  onApprove={handleApprove}
+                  onReject={setRejectTarget}
+                  onPreview={setPreviewTarget}
+                  actionLoading={actionLoading}
+                  highlighted={isHighlighted}
+                  cardRef={isHighlighted ? highlightRef : null}
+                />
+              );
+            })}
           </div>
         )}
       </div>
 
       <PreviewModal item={previewTarget} onClose={() => setPreviewTarget(null)} />
-      <RejectModal item={rejectTarget} onClose={() => setRejectTarget(null)} onConfirm={handleRejectConfirm} loading={actionLoading} />
+      <RejectModal
+        item={rejectTarget}
+        onClose={() => setRejectTarget(null)}
+        onConfirm={handleRejectConfirm}
+        loading={actionLoading}
+      />
     </DashboardLayout>
   );
 }

@@ -7,14 +7,21 @@ import { authService } from "../services/auth.service";
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  // Read localStorage synchronously on first render — eliminates the
-  // loading flash on the root page entirely (no useEffect delay needed).
-  const [user, setUser] = useState(() => {
-    if (typeof window === "undefined") return null;
-    try { return authService.getSavedUser(); } catch { return null; }
-  });
-  const [loading, setLoading] = useState(false);
+  const [user, setUser]       = useState(null);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
+
+  // Runs once on mount — synchronous localStorage read, no async delay
+  useEffect(() => {
+    try {
+      const saved = authService.getSavedUser();
+      if (saved) setUser(saved);
+    } catch {
+      // corrupted storage — ignore
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   const login = async (email, password) => {
     const { user: loggedInUser, token } = await authService.login(email, password);

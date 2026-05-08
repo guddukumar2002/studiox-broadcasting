@@ -9,25 +9,16 @@ export default function RootPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading) {
-      if (!user) {
-        router.push("/auth/login");
-      } else {
-        if (user.role === "teacher") {
-          router.push("/teacher/dashboard");
-        } else if (user.role === "principal") {
-          router.push("/principal/dashboard");
-        }
-      }
+    if (loading) return;
+    if (!user) {
+      router.replace("/auth/login");
+    } else if (user.role === "teacher") {
+      router.replace("/teacher/dashboard");
+    } else {
+      router.replace("/principal/dashboard");
     }
   }, [user, loading, router]);
 
-  return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-12 h-12 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin" />
-        <p className="text-slate-500 font-bold text-sm uppercase tracking-widest animate-pulse">Initializing StudioX...</p>
-      </div>
-    </div>
-  );
+  // Minimal invisible placeholder — redirect fires immediately
+  return null;
 }
